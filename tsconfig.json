@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "composite": true,
+    "downlevelIteration": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "preserve",
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "moduleDetection": "force",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "esnext",
+    "types": [
+      "bun-types" // add Bun global
+    ]
+  },
+  "include": ["package.json", "src/**/*"]
+}

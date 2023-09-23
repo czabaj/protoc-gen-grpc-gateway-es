@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Run buf using a specified version.
+# This will make generation and build reproducible and independent on the local
+# environment.
+
+go run github.com/bufbuild/buf/cmd/buf@v1.10.0 "$@"
