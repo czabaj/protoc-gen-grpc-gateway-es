@@ -1,9 +1,13 @@
+import { expect } from "bun:test";
 import { unlink } from "node:fs/promises";
 
 import { CodeGeneratorRequest, FileDescriptorSet } from "@bufbuild/protobuf";
+import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
+import ts from "typescript";
+
+import { generateTs } from "../src/generateTs";
 
 type NonEmptyString = Exclude<string, "">;
-
 type ProtoFile = {
   name: NonEmptyString;
   content: `syntax = "${`proto2` | `proto3`}";${string}`;
@@ -56,3 +60,29 @@ export async function getCodeGeneratorRequest(
     await Promise.allSettled(filePaths.map((fp) => unlink(fp)));
   }
 }
+
+const toTypeScriptAST = (typeScriptSource: string): ts.SourceFile =>
+  ts.createSourceFile(`virtual.ts`, typeScriptSource, ts.ScriptTarget.Latest);
+
+// removes comments and formats the code
+const cleanTypeScript = (typeScriptSource: string): string => {
+  const ast = toTypeScriptAST(typeScriptSource);
+  return ts.createPrinter({ removeComments: true }).printFile(ast);
+};
+
+export const assertTypeScript = (
+  typeScriptActual: string,
+  typeScriptExpectec
+): void => {
+  expect(cleanTypeScript(typeScriptActual)).toBe(
+    cleanTypeScript(typeScriptExpectec)
+  );
+};
+
+export const createPlugin = () => {
+  return createEcmaScriptPlugin({
+    name: "test-plugin",
+    version: "v0.1.0",
+    generateTs,
+  });
+};
