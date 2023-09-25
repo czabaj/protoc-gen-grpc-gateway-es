@@ -23,7 +23,7 @@ const createPlugin = () => {
   });
 };
 
-test("should print runtime imports", async () => {
+test(`should generate simple enums`, async () => {
   const plugin = createPlugin();
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
@@ -44,6 +44,31 @@ enum FooEnum {
   FOO = 'FOO',
   BAR = 'BAR',
   BAZ = 'BAZ',
+  }`)
+  );
+});
+
+test(`subtracts common prefix from the enum`, async () => {
+  const plugin = createPlugin();
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: "state_enum.proto",
+      content: `syntax = "proto3";
+enum State {
+  STATE_FOO = 0;
+  STATE_BAR = 1;
+  STATE_BAZ = 2;
+};
+    `,
+    },
+  ]);
+  const resp = plugin.run(req);
+  const cleaned = cleanTypeScript(resp.file[0].content!);
+  expect(cleaned).toBe(
+    cleanTypeScript(`export enum State {
+  FOO = 'STATE_FOO',
+  BAR = 'STATE_BAR',
+  BAZ = 'STATE_BAZ',
   }`)
   );
 });
