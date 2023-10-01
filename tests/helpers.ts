@@ -79,10 +79,15 @@ export const assertTypeScript = (
   );
 };
 
-export const createPlugin = () => {
+const createPlugin = () => {
   return createEcmaScriptPlugin({
     name: "test-plugin",
     version: "v0.1.0",
     generateTs,
   });
+};
+
+export const getResponse = (req: CodeGeneratorRequest) => {
+  const plugin = createPlugin();
+  return plugin.run(req);
 };

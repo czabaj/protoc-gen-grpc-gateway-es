@@ -2,12 +2,11 @@ import { test } from "bun:test";
 
 import {
   assertTypeScript,
-  createPlugin,
   getCodeGeneratorRequest,
+  getResponse,
 } from "./helpers";
 
 test(`should generate simple message`, async () => {
-  const plugin = createPlugin();
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
       name: "simple_message.proto",
@@ -19,7 +18,7 @@ message SimpleMessage {
 };`,
     },
   ]);
-  const resp = plugin.run(req);
+  const resp = getResponse(req);
   const generatedTypeScript = resp.file[0].content!;
   assertTypeScript(
     generatedTypeScript,
@@ -33,7 +32,6 @@ export type SimpleMessage {
 });
 
 test(`should understand the openapiv2_schema option for required`, async () => {
-  const plugin = createPlugin();
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
       name: "message_required_via_openapi_option.proto",
@@ -50,16 +48,50 @@ message OptionMessage {
     }
   };
   string foo = 1;
+  int32 bar = 2;
 };`,
     },
   ]);
-  const resp = plugin.run(req);
+  const resp = getResponse(req);
   const generatedTypeScript = resp.file[0].content!;
   assertTypeScript(
     generatedTypeScript,
     `
 export type OptionMessage {
   foo: string;
+  bar?: number;
+}`
+  );
+});
+
+test(`should properly reference messages`, async () => {
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: "nested_message.proto",
+      content: `syntax = "proto3";
+
+message MessageA {
+  string foo = 1;
+  MessageB bar = 2;
+};
+
+message MessageB {
+  string bar = 1;
+}`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const generatedTypeScript = resp.file[0].content!;
+  assertTypeScript(
+    generatedTypeScript,
+    `
+export type MessageA {
+  foo?: string;
+  bar?: MessageB;
+}
+
+export type MessageB {
+  bar?: string;
 }`
   );
 });

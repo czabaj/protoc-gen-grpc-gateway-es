@@ -2,12 +2,11 @@ import { test } from "bun:test";
 
 import {
   assertTypeScript,
-  createPlugin,
   getCodeGeneratorRequest,
+  getResponse,
 } from "./helpers";
 
 test(`should generate simple enums`, async () => {
-  const plugin = createPlugin();
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
       name: "simple_enum.proto",
@@ -20,7 +19,7 @@ enum FooEnum {
     `,
     },
   ]);
-  const resp = plugin.run(req);
+  const resp = getResponse(req);
   const generatedTypeScript = resp.file[0].content!;
   assertTypeScript(
     generatedTypeScript,
@@ -34,7 +33,6 @@ export enum FooEnum {
 });
 
 test(`subtracts common prefix from the enum`, async () => {
-  const plugin = createPlugin();
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
       name: "state_enum.proto",
@@ -47,7 +45,7 @@ enum State {
     `,
     },
   ]);
-  const resp = plugin.run(req);
+  const resp = getResponse(req);
   const generatedTypeScript = resp.file[0].content!;
   assertTypeScript(
     generatedTypeScript,
