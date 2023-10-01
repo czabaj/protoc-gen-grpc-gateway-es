@@ -4,11 +4,16 @@
     "@bufbuild/protoplugin": "^1.3.1"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.26.1",
+    "@bufbuild/protoc-gen-es": "^1.3.1",
     "bun-types": "latest",
     "typescript": "4"
   },
   "module": "src/index.ts",
   "name": "protoc-gen-grpc-gateway-es",
+  "scripts": {
+    "generateOptions": "cd options && npx buf generate proto"
+  },
   "type": "module",
   "version": "0.0.1"
 }

@@ -39,18 +39,18 @@ export async function getCodeGeneratorRequest(
         `buf`,
         `build`,
         `--output`,
-        `-#format=json`,
+        `-#format=bin`,
         ...filePaths.flatMap((f) => [`--path`, `"${f}"`]),
       ],
       {
         cwd,
       }
     );
-    const fileDescriptorJsonString = await new Response(proc.stdout).text();
-    const fileDescriptorSet = FileDescriptorSet.fromJsonString(
-      fileDescriptorJsonString,
-      { ignoreUnknownFields: true }
-    );
+    const fileDescriptorBuffer = await new Response(proc.stdout).arrayBuffer();
+    const fileDescriptorBin = new Uint8Array(fileDescriptorBuffer);
+    // Only binary format currently preserves extensions
+    // @see https://github.com/bufbuild/protobuf-es/issues/564
+    const fileDescriptorSet = FileDescriptorSet.fromBinary(fileDescriptorBin);
     return new CodeGeneratorRequest({
       parameter,
       fileToGenerate: protoFiles.map((f) => f.name),

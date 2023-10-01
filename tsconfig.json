@@ -3,6 +3,7 @@
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "composite": true,
+    "declarationMap": true,
     "downlevelIteration": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "preserve",
@@ -19,5 +20,5 @@
       "bun-types" // add Bun global
     ]
   },
-  "include": ["package.json", "src/**/*"]
+  "include": ["package.json", "src/**/*", "options/gen/**/*"]
 }

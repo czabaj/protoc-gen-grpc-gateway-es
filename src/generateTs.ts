@@ -7,12 +7,18 @@ import {
 import { Schema } from "@bufbuild/protoplugin";
 import {
   type GeneratedFile,
-  type Printable,
   getFieldTyping,
   localName,
   makeJsDoc,
-  getFieldIntrinsicDefaultValue,
+  findCustomMessageOption,
 } from "@bufbuild/protoplugin/ecmascript";
+
+import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapi-v2/openapiv2_pb";
+
+const getProtocGenOpenapiv2Option = (message: DescMessage) => {
+  const option = findCustomMessageOption(message, 1042, OpenApiV2Schema);
+  return option;
+};
 
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
   f.print(makeJsDoc(enumeration));
@@ -25,10 +31,16 @@ function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
   f.print`}`;
 }
 
-function generateField(schema: Schema, f: GeneratedFile, field: DescField) {
+function generateField(
+  schema: Schema,
+  f: GeneratedFile,
+  field: DescField,
+  openApiV2Required?: string[]
+) {
   f.print(makeJsDoc(field));
   const { typing } = getFieldTyping(field, f);
-  f.print`${localName(field)}?: ${typing};`;
+  const required = openApiV2Required?.includes(field.name);
+  f.print`${localName(field)}${required ? `` : `?`}: ${typing};`;
 }
 
 function generateOneof(schema: Schema, f: GeneratedFile, oneof: DescOneof) {
@@ -42,16 +54,7 @@ function generateMessage(
   f: GeneratedFile,
   message: DescMessage
 ) {
-  const protoN = schema.runtime[message.file.syntax];
-  const {
-    PartialMessage,
-    FieldList,
-    Message,
-    PlainMessage,
-    BinaryReadOptions,
-    JsonReadOptions,
-    JsonValue,
-  } = schema.runtime;
+  const openApiV2Schema = getProtocGenOpenapiv2Option(message);
   f.print(makeJsDoc(message));
   f.print`export type ${message} = {`;
   for (const member of message.members) {
@@ -60,7 +63,7 @@ function generateMessage(
         generateOneof(schema, f, member);
         break;
       default:
-        generateField(schema, f, member);
+        generateField(schema, f, member, openApiV2Schema?.jsonSchema?.required);
         break;
     }
     f.print();
@@ -72,7 +75,6 @@ function generateMessage(
   for (const nestedMessage of message.nestedMessages) {
     generateMessage(schema, f, nestedMessage);
   }
-  // We do not support extensions at this time
 }
 
 export function generateTs(schema: Schema) {
