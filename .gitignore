@@ -168,5 +168,6 @@ dist
 .yarn/install-state.gz
 .pnp.\*
 
-# IntelliJ based IDEs
-.idea
+# macOS index files
+
+.DS_Store

@@ -12,7 +12,7 @@
   "module": "src/index.ts",
   "name": "protoc-gen-grpc-gateway-es",
   "scripts": {
-    "generateOptions": "cd options && npx buf generate proto"
+    "generateOptions": "cd options && npx buf generate buf.build/googleapis/googleapis --path google/api/http.proto && npx buf generate buf.build/grpc-ecosystem/grpc-gateway"
   },
   "type": "module",
   "version": "0.0.1"

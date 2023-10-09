@@ -2,7 +2,9 @@ import {
   DescEnum,
   DescField,
   DescMessage,
+  DescMethod,
   DescOneof,
+  DescService,
 } from "@bufbuild/protobuf";
 import { Schema } from "@bufbuild/protoplugin";
 import {
@@ -13,10 +15,16 @@ import {
   findCustomMessageOption,
 } from "@bufbuild/protoplugin/ecmascript";
 
-import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapi-v2/openapiv2_pb";
+import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/options/openapiv2_pb";
+import { HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
 
-const getProtocGenOpenapiv2Option = (message: DescMessage) => {
+const getOpenapiMessageOption = (message: DescMessage) => {
   const option = findCustomMessageOption(message, 1042, OpenApiV2Schema);
+  return option;
+};
+
+const getGoogleapisHttpMethodOption = (method: DescMethod) => {
+  const option = findCustomMessageOption(method, 72295728, GoogleapisHttpRule);
   return option;
 };
 
@@ -54,7 +62,7 @@ function generateMessage(
   f: GeneratedFile,
   message: DescMessage
 ) {
-  const openApiV2Schema = getProtocGenOpenapiv2Option(message);
+  const openApiV2Schema = getOpenapiMessageOption(message);
   f.print(makeJsDoc(message));
   f.print`export type ${message} = {`;
   for (const member of message.members) {
@@ -77,6 +85,47 @@ function generateMessage(
   }
 }
 
+function generateService(
+  schema: Schema,
+  f: GeneratedFile,
+  service: DescService
+) {
+  for (const method of service.methods) {
+    const googleapisHttpMethodOption = getGoogleapisHttpMethodOption(method);
+    if (!googleapisHttpMethodOption) {
+      throw new Error(
+        `Missing "option (google.api.http)" for service "${service.name}" and method "${method.name}"`
+      );
+    }
+    if (!googleapisHttpMethodOption.pattern.value) {
+      throw new Error(
+        `Missing URL in "option (google.api.http)" for service "${service.name}" and method "${method.name}"`
+      );
+    }
+    f.print(makeJsDoc(method));
+    f.print`export const ${service.name}_${
+      method.name
+    } = (config: any) => (params: ${method.input.name}) => {
+      const url = new URL("${
+        googleapisHttpMethodOption.pattern.value as string
+      }", config.basePath ?? window.location.href);
+        if (params) {
+          for (const [k, v] of Object.entries(params)) {
+            url.searchParams.set(k, v);
+          }
+        }
+      const bearerToken = typeof config.bearerToken === "function" ? config.bearerToken() : config.bearerToken;
+      const request = new Request(url.href, {
+        method: "GET",
+        headers bearerToken ? {Authorization: \`Bearer \${bearerToken}\`} : undefined,
+      })
+      const typeId = (response: any) => response as ${method.output.name};
+      return { request, typeId }
+    };
+`;
+  }
+}
+
 export function generateTs(schema: Schema) {
   for (const file of schema.files) {
     const f = schema.generateFile(file.name + "_pb.ts");
@@ -86,6 +135,9 @@ export function generateTs(schema: Schema) {
     }
     for (const message of file.messages) {
       generateMessage(schema, f, message);
+    }
+    for (const service of file.services) {
+      generateService(schema, f, service);
     }
   }
 }
