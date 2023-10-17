@@ -13,6 +13,8 @@ import {
   localName,
   makeJsDoc,
   findCustomMessageOption,
+  Printable,
+  ImportSymbol,
 } from "@bufbuild/protoplugin/ecmascript";
 
 import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/options/openapiv2_pb";
@@ -26,6 +28,25 @@ const getOpenapiMessageOption = (message: DescMessage) => {
 const getGoogleapisHttpMethodOption = (method: DescMethod) => {
   const option = findCustomMessageOption(method, 72295728, GoogleapisHttpRule);
   return option;
+};
+
+const isImportSymbol = (
+  printable: Exclude<Printable, Printable[]>
+): printable is ImportSymbol => {
+  return (printable as any)?.kind === `es_symbol`;
+};
+
+const resolveWKT = (typing: Printable) => {
+  if (!Array.isArray(typing)) return typing;
+  const type = typing[0] as Exclude<Printable, Printable[]>;
+  if (!isImportSymbol(type)) return typing;
+  switch (type.name) {
+    default:
+      return typing;
+    case `Duration`:
+    case `Timestamp`:
+      return [`string`];
+  }
 };
 
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
@@ -47,10 +68,12 @@ function generateField(
 ) {
   f.print(makeJsDoc(field));
   const { typing } = getFieldTyping(field, f);
+  const resolvedTyping = resolveWKT(typing);
   const required = openApiV2Required?.includes(field.name);
-  f.print`${localName(field)}${required ? `` : `?`}: ${typing};`;
+  f.print`${localName(field)}${required ? `` : `?`}: ${resolvedTyping};`;
 }
 
+// TODO: this currently prints all fields, like intersection, but we want to print union of types instead
 function generateOneof(schema: Schema, f: GeneratedFile, oneof: DescOneof) {
   for (const field of oneof.fields) {
     generateField(schema, f, field);

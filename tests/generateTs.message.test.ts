@@ -95,3 +95,32 @@ export type MessageB {
 }`
   );
 });
+
+test(`should handle well-known types`, async () => {
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: "well_known_types.proto",
+      content: `syntax = "proto3";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+message MessageWKT {
+  string foo = 1;
+  google.protobuf.Duration duration = 2;
+  google.protobuf.Timestamp timestamp = 3;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const generatedTypeScript = resp.file[0].content!;
+  assertTypeScript(
+    generatedTypeScript,
+    `
+export type MessageWKT {
+  foo?: string;
+  duration?: string;
+  timestamp?: string;
+}`
+  );
+});
