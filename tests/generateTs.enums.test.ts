@@ -20,7 +20,7 @@ enum FooEnum {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
@@ -46,7 +46,7 @@ enum State {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `

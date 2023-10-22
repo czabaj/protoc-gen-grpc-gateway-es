@@ -7,7 +7,7 @@
     "downlevelIteration": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "preserve",
-    "lib": ["ESNext"],
+    "lib": ["DOM", "ESNext"],
     "module": "esnext",
     "moduleDetection": "force",
     "moduleResolution": "node",

@@ -30,10 +30,12 @@ test(`should generate simple simple service`, async () => {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
+      import { createGetRequest } from "./runtime.js";
+    
       export type SimpleMessageRequest {
         foo?: string;
       }
@@ -42,20 +44,7 @@ test(`should generate simple simple service`, async () => {
         bar?: number;
       }
       
-      export const SimpleService_GetSimpleMessage = (config: any) => (params: SimpleMessageRequest) => {
-        const url = new URL("/v1/simple_message", config.basePath ?? window.location.href);
-        if (params) {
-          for (const [k, v] of Object.entries(params)) {
-            url.searchParams.set(k, v);
-          }
-        }
-        const bearerToken = typeof config.bearerToken === "function" ? config.bearerToken() : config.bearerToken;
-        const request = new Request(url.href, {
-          method: "GET",
-          headers bearerToken ? {Authorization: \`Bearer \${bearerToken}\`} : undefined,
-        })
-        const typeId = (response: any) => response as SimpleMessageResponse;
-        return { request, typeId }
-      };`
+      export const SimpleService_GetSimpleMessage = createGetRequest<SimpleMessageRequest, SimpleMessageResponse>("/v1/simple_message");
+      `
   );
 });

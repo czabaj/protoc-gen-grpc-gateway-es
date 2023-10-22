@@ -19,7 +19,7 @@ message SimpleMessage {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
@@ -53,7 +53,7 @@ message OptionMessage {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
@@ -81,7 +81,7 @@ message MessageB {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
@@ -113,7 +113,7 @@ message MessageWKT {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[0].content!;
+  const generatedTypeScript = resp.file[1].content!;
   assertTypeScript(
     generatedTypeScript,
     `
