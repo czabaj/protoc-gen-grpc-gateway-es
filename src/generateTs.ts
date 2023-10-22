@@ -2,7 +2,6 @@ import {
   DescEnum,
   DescField,
   DescMessage,
-  DescMethod,
   DescOneof,
   DescService,
 } from "@bufbuild/protobuf";
@@ -12,13 +11,15 @@ import {
   getFieldTyping,
   localName,
   makeJsDoc,
-  findCustomMessageOption,
   Printable,
   ImportSymbol,
 } from "@bufbuild/protoplugin/ecmascript";
-
-import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/options/openapiv2_pb";
-import { HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
+import {
+  getGoogleapisHttpMethodOption,
+  getOpenapiMessageOption,
+  isImportSymbol,
+  pathParametersToLocal,
+} from "./helpers";
 
 const runtimeFile = Bun.file(new URL("./runtime.ts", import.meta.url).pathname);
 const runtimeFileContent = await runtimeFile.text();
@@ -30,22 +31,6 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   file.print(runtimeFileContent);
   const createGetRequest = file.export(`createGetRequest`);
   return { createGetRequest };
-};
-
-const getOpenapiMessageOption = (message: DescMessage) => {
-  const option = findCustomMessageOption(message, 1042, OpenApiV2Schema);
-  return option;
-};
-
-const getGoogleapisHttpMethodOption = (method: DescMethod) => {
-  const option = findCustomMessageOption(method, 72295728, GoogleapisHttpRule);
-  return option;
-};
-
-const isImportSymbol = (
-  printable: Exclude<Printable, Printable[]>
-): printable is ImportSymbol => {
-  return (printable as any)?.kind === `es_symbol`;
 };
 
 const resolveWKT = (typing: Printable) => {
@@ -138,12 +123,11 @@ function generateService(
         `Missing URL in "option (google.api.http)" for service "${service.name}" and method "${method.name}"`
       );
     }
-    f.print(makeJsDoc(method));
-    f.print`export const ${service.name}_${method.name} = ${
-      runtimeFile.createGetRequest
-    }<${method.input.name}, ${method.output.name}>("${
+    const path = pathParametersToLocal(
       googleapisHttpMethodOption.pattern.value as string
-    }")}
+    );
+    f.print(makeJsDoc(method));
+    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createGetRequest}<${method.input.name}, ${method.output.name}>("${path}")}
     `;
   }
 }
