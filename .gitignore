@@ -171,3 +171,6 @@ dist
 # macOS index files
 
 .DS_Store
+
+# temporary test files
+/tests/proto/*.proto

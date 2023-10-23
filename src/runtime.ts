@@ -1,8 +1,3 @@
-export type Config = {
-  basePath?: string;
-  bearerToken?: string | (() => string);
-};
-
 const pathParameterRe = /{([^}]+)}/g;
 
 export const replacePathParameters = (
@@ -25,10 +20,20 @@ export const replacePathParameters = (
   });
 };
 
+export type Config = {
+  basePath?: string;
+  bearerToken?: string | (() => string);
+};
+
+export type PreparedRequest<Output> = {
+  request: Request;
+  responseTypeId: (response: any) => Output;
+};
+
 export const createGetRequest =
   <Input, Output>(path: string) =>
   (config: Config) =>
-  (params: Input) => {
+  (params: Input): PreparedRequest<Output> => {
     const paramsMap =
       params && (new Map(Object.entries(params)) as Map<string, string>);
     const pathWithParams = replacePathParameters(path, paramsMap);
@@ -50,6 +55,6 @@ export const createGetRequest =
         : undefined,
     });
 
-    const typeId = (response: any) => response as Output;
-    return { request, typeId };
+    const responseTypeId = (response: any) => response as Output;
+    return { request, responseTypeId };
   };
