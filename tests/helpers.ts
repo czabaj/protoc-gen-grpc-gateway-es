@@ -1,7 +1,11 @@
 import { expect } from "bun:test";
 import { unlink } from "node:fs/promises";
 
-import { CodeGeneratorRequest, FileDescriptorSet } from "@bufbuild/protobuf";
+import {
+  CodeGeneratorRequest,
+  CodeGeneratorResponse,
+  FileDescriptorSet,
+} from "@bufbuild/protobuf";
 import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
 import ts from "typescript";
 
@@ -87,7 +91,21 @@ const createPlugin = () => {
   });
 };
 
-export const getResponse = (req: CodeGeneratorRequest) => {
+export const getResponse = (
+  req: CodeGeneratorRequest
+): CodeGeneratorResponse => {
   const plugin = createPlugin();
   return plugin.run(req);
+};
+
+export const findResponseForInputFile = (
+  resp: CodeGeneratorResponse,
+  fileName: string
+) => {
+  const outputFileName = fileName.replace(/\.proto$/, "_pb.ts");
+  const file = resp.file.find((f) => f.name === outputFileName);
+  if (!file) {
+    throw new Error(`No output file found for ${fileName}`);
+  }
+  return file;
 };

@@ -2,14 +2,16 @@ import { test } from "bun:test";
 
 import {
   assertTypeScript,
+  findResponseForInputFile,
   getCodeGeneratorRequest,
   getResponse,
 } from "./helpers";
 
 test(`should generate simple simple service`, async () => {
+  const inputFileName = `simple_service.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "simple_service.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 
       import "google/api/annotations.proto";
@@ -30,9 +32,9 @@ test(`should generate simple simple service`, async () => {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
       import { createGetRequest } from "./runtime.js";
     
@@ -50,9 +52,10 @@ test(`should generate simple simple service`, async () => {
 });
 
 test(`should handle path with path parameter`, async () => {
+  const inputFileName = `service_with_path_parameter.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "service_with_path_parameter.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 
       import "google/api/annotations.proto";
@@ -74,9 +77,9 @@ test(`should handle path with path parameter`, async () => {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
       import { createGetRequest } from "./runtime.js";
     

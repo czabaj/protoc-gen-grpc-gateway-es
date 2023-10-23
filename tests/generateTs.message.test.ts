@@ -2,14 +2,16 @@ import { test } from "bun:test";
 
 import {
   assertTypeScript,
+  findResponseForInputFile,
   getCodeGeneratorRequest,
   getResponse,
 } from "./helpers";
 
 test(`should generate simple message`, async () => {
+  const inputFileName = `simple_message.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "simple_message.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 message SimpleMessage {
   string foo = 1;
@@ -19,9 +21,9 @@ message SimpleMessage {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
 export type SimpleMessage {
   foo?: string;
@@ -32,9 +34,10 @@ export type SimpleMessage {
 });
 
 test(`should understand the openapiv2_schema option for required`, async () => {
+  const inputFileName = `message_required_via_openapi_option.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "message_required_via_openapi_option.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 
 import "protoc-gen-openapiv2/options/annotations.proto";
@@ -53,9 +56,9 @@ message OptionMessage {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
 export type OptionMessage {
   foo: string;
@@ -65,9 +68,10 @@ export type OptionMessage {
 });
 
 test(`should properly reference messages`, async () => {
+  const inputFileName = `message_references.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "nested_message.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 
 message MessageA {
@@ -81,9 +85,9 @@ message MessageB {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
 export type MessageA {
   foo?: string;
@@ -97,9 +101,10 @@ export type MessageB {
 });
 
 test(`should handle well-known types`, async () => {
+  const inputFileName = `well_known_types.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
-      name: "well_known_types.proto",
+      name: inputFileName,
       content: `syntax = "proto3";
 
 import "google/protobuf/duration.proto";
@@ -114,9 +119,9 @@ message MessageWKT {
     },
   ]);
   const resp = getResponse(req);
-  const generatedTypeScript = resp.file[1].content!;
+  const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(
-    generatedTypeScript,
+    outputFile.content!,
     `
 export type MessageWKT {
   foo?: string;
