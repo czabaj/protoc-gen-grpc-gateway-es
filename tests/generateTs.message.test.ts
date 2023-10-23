@@ -104,11 +104,12 @@ test(`should handle well-known types`, async () => {
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "google/api/field_behavior.proto";
 
 message MessageWKT {
   string foo = 1;
   google.protobuf.Duration duration = 2;
-  google.protobuf.Timestamp timestamp = 3;
+  google.protobuf.Timestamp timestamp = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 };`,
     },
   ]);
@@ -119,7 +120,7 @@ message MessageWKT {
     `
 export type MessageWKT {
   foo?: string;
-  duration?: string;
+  duration?: string | null;
   timestamp?: string;
 }`
   );

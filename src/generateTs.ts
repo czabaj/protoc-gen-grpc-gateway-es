@@ -11,13 +11,15 @@ import {
   getFieldTyping,
   localName,
   makeJsDoc,
-  Printable,
   ImportSymbol,
 } from "@bufbuild/protoplugin/ecmascript";
+
+import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
 import {
+  asWKT,
+  getGoogleapisFieldBehaviorOption,
   getGoogleapisHttpMethodOption,
   getOpenapiMessageOption,
-  isImportSymbol,
   pathParametersToLocal,
 } from "./helpers";
 
@@ -31,19 +33,6 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   file.print(runtimeFileContent);
   const createGetRequest = file.export(`createGetRequest`);
   return { createGetRequest };
-};
-
-const resolveWKT = (typing: Printable) => {
-  if (!Array.isArray(typing)) return typing;
-  const type = typing[0] as Exclude<Printable, Printable[]>;
-  if (!isImportSymbol(type)) return typing;
-  switch (type.name) {
-    default:
-      return typing;
-    case `Duration`:
-    case `Timestamp`:
-      return [`string`];
-  }
 };
 
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
@@ -65,9 +54,22 @@ function generateField(
 ) {
   f.print(makeJsDoc(field));
   const { typing } = getFieldTyping(field, f);
-  const resolvedTyping = resolveWKT(typing);
-  const required = openApiV2Required?.includes(field.name);
-  f.print`${localName(field)}${required ? `` : `?`}: ${resolvedTyping};`;
+  const wktTyping = asWKT(typing);
+  const googleapisFieldBehaviorOption = getGoogleapisFieldBehaviorOption(field);
+  const required =
+    openApiV2Required?.includes(field.name) ||
+    googleapisFieldBehaviorOption === GoogleapisFieldBehavior.REQUIRED;
+
+  if (
+    wktTyping &&
+    !required &&
+    googleapisFieldBehaviorOption !== GoogleapisFieldBehavior.OUTPUT_ONLY
+  ) {
+    // whent WKT can be set from the client, it must be nullable
+    f.print`${localName(field)}?: ${wktTyping} | null;`;
+  } else {
+    f.print`${localName(field)}${required ? `` : `?`}: ${wktTyping || typing};`;
+  }
 }
 
 // TODO: this currently prints all fields, like intersection, but we want to print union of types instead
