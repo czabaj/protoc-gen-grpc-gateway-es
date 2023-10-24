@@ -61,7 +61,7 @@ export async function getCodeGeneratorRequest(
       protoFile: fileDescriptorSet.file,
     });
   } finally {
-    await Promise.allSettled(filePaths.map((fp) => unlink(fp)));
+    Promise.allSettled(filePaths.map((fp) => unlink(fp)));
   }
 }
 
