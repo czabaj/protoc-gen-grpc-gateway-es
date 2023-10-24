@@ -89,8 +89,7 @@ Folders and their meaning
 
 1. The `bun` is used also as a package manager, use [`bun add`](https://bun.sh/docs/cli/add) for adding dependencies, [`bun run`](https://bun.sh/docs/cli/run) for running NPM scripts or [`bunx`](https://bun.sh/docs/cli/bunx) instead of `npx`.
 1. Beware that `bun` and `buf` are two different things and easy to confuse, it is easy to make mistake like running `bun` command with `buf` and vice versa.
-1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. In some rare cases your test might fail before the temporary file is cleaned and the test framework is then stucked, because it refuses to run when it want to create a file which already exists - this is intentional to avoid conflicts - if you suspect that this happened to you, simply remove all `*.proto` files in `/tests/proto/` or run `bun run cleanTests`.
-1. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use uniqie file name**. I usually name the file loosely after the test-case.
+1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use uniqie file name**. I usually name the file loosely after the test-case.
 
 ## Usage and deployment
 

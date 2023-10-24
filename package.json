@@ -12,7 +12,6 @@
   "module": "src/index.ts",
   "name": "protoc-gen-grpc-gateway-es",
   "scripts": {
-    "cleanTests": "rm tests/proto/*.proto",
     "generateOptions": "cd options && bunx buf generate buf.build/googleapis/googleapis && bunx buf generate buf.build/grpc-ecosystem/grpc-gateway && bunx buf generate buf.build/protocolbuffers/wellknowntypes"
   },
   "type": "module",
