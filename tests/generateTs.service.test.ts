@@ -95,3 +95,87 @@ test(`should handle path with path parameter`, async () => {
       `
   );
 });
+
+test(`should do proper linking when service reference other file`, async () => {
+  const inputFileNameResource = `linking_resource.proto`;
+  const inputFileNameService = `linking_service.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileNameResource,
+      content: `syntax = "proto3";
+
+      enum FlipEnum {
+        FLIP = 0;
+        FLAP = 1;
+        FLOP = 2;
+      };
+      
+      message FlipMessage {
+        FlipEnum flip = 1;
+      };
+      `,
+    },
+    {
+      name: inputFileNameService,
+      content: `syntax = "proto3";
+
+      import "google/api/annotations.proto";
+      import "linking_resource.proto";
+      
+      service LinkingService {
+        rpc GetLinkedResource(GetLinkiedRequest) returns (GetLinkedResponse) {
+          option (google.api.http) = {get: "/v1/{name_test=projects/*/documents/*}:customMethod"};
+        }; 
+      };
+      
+      message GetLinkiedRequest {
+        string name_test = 1;
+      };
+
+      message GetLinkedResponse {
+        FlipMessage flip = 1;
+      };
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFileResource = findResponseForInputFile(
+    resp,
+    inputFileNameResource
+  );
+  const outputFileService = findResponseForInputFile(
+    resp,
+    inputFileNameService
+  );
+  assertTypeScript(
+    outputFileResource.content!,
+    `
+      export enum FlipEnum {
+        FLIP = 'FLIP',
+        FLAP = 'FLAP',
+        FLOP = 'FLOP',
+      }
+      
+      export type FlipMessage {
+        flip?: FlipEnum;
+      }
+      `
+  );
+  assertTypeScript(
+    outputFileService.content!,
+    `
+    import type { FlipMessage } from "./linking_resource_pb.js";
+    import { createGetRequest } from "./runtime.js";
+      
+    export type GetLinkiedRequest {
+      nameTest?: string;
+    }
+    
+    export type GetLinkedResponse {
+      flip?: FlipMessage;
+    }
+    
+    export const LinkingService_GetLinkedResource = createGetRequest<GetLinkiedRequest, GetLinkedResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
+      `
+  );
+});
