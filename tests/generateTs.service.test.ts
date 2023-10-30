@@ -36,7 +36,7 @@ test(`should generate simple simple service`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createGetRequest } from "./runtime.js";
+      import { createGetRPC } from "./runtime.js";
     
       export type SimpleMessageRequest {
         foo?: string;
@@ -46,7 +46,7 @@ test(`should generate simple simple service`, async () => {
         bar?: number;
       }
       
-      export const SimpleService_GetSimpleMessage = createGetRequest<SimpleMessageRequest, SimpleMessageResponse>("/v1/simple_message");
+      export const SimpleService_GetSimpleMessage = createGetRPC<SimpleMessageRequest, SimpleMessageResponse>("/v1/simple_message");
       `
   );
 });
@@ -81,7 +81,7 @@ test(`should handle path with path parameter`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createGetRequest } from "./runtime.js";
+      import { createGetRPC } from "./runtime.js";
     
       export type WithPathParameterRequest {
         nameTest?: string;
@@ -91,7 +91,7 @@ test(`should handle path with path parameter`, async () => {
         bar?: number;
       }
       
-      export const WithPathParameterService_GetWithPathParameter = createGetRequest<WithPathParameterRequest, WithPathParameterResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
+      export const WithPathParameterService_GetWithPathParameter = createGetRPC<WithPathParameterRequest, WithPathParameterResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
       `
   );
 });
@@ -165,7 +165,7 @@ test(`should do proper linking when service reference other file`, async () => {
     outputFileService.content!,
     `
     import type { FlipMessage } from "./linking_resource_pb.js";
-    import { createGetRequest } from "./runtime.js";
+    import { createGetRPC } from "./runtime.js";
       
     export type GetLinkiedRequest {
       nameTest?: string;
@@ -175,7 +175,7 @@ test(`should do proper linking when service reference other file`, async () => {
       flip?: FlipMessage;
     }
     
-    export const LinkingService_GetLinkedResource = createGetRequest<GetLinkiedRequest, GetLinkedResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
+    export const LinkingService_GetLinkedResource = createGetRPC<GetLinkiedRequest, GetLinkedResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
       `
   );
 });

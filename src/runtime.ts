@@ -20,20 +20,22 @@ export const replacePathParameters = (
   });
 };
 
-export type Config = {
+export type RequestConfig = {
   basePath?: string;
   bearerToken?: string | (() => string);
 };
 
-export type PreparedRequest<Output> = {
-  request: Request;
-  responseTypeId: (response: any) => Output;
+export type RPC<RequestMessage, ResponseMessage> = {
+  createRequest: (
+    config: RequestConfig
+  ) => (variables: RequestMessage) => Request;
+  responseTypeId: (response: any) => ResponseMessage;
 };
 
-export const createGetRequest =
-  <Input, Output>(path: string) =>
-  (config: Config) =>
-  (params: Input): PreparedRequest<Output> => {
+export const createGetRPC = <RequestMessage, ResponseMessage>(
+  path: string
+): RPC<RequestMessage, ResponseMessage> => {
+  const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
     const paramsMap =
       params && (new Map(Object.entries(params)) as Map<string, string>);
     const pathWithParams = replacePathParameters(path, paramsMap);
@@ -54,7 +56,8 @@ export const createGetRequest =
         ? { Authorization: `Bearer \${bearerToken}` }
         : undefined,
     });
-
-    const responseTypeId = (response: any) => response as Output;
-    return { request, responseTypeId };
+    return request;
   };
+  const responseTypeId = (response: any) => response as ResponseMessage;
+  return { createRequest, responseTypeId };
+};

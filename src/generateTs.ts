@@ -26,13 +26,13 @@ import {
 const runtimeFile = Bun.file(new URL("./runtime.ts", import.meta.url).pathname);
 const runtimeFileContent = await runtimeFile.text();
 type RuntimeFile = {
-  createGetRequest: ImportSymbol;
+  createGetRPC: ImportSymbol;
 };
 export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(runtimeFileContent);
-  const createGetRequest = file.export(`createGetRequest`);
-  return { createGetRequest };
+  const createGetRPC = file.export(`createGetRPC`);
+  return { createGetRPC };
 };
 
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
@@ -129,7 +129,7 @@ function generateService(
       googleapisHttpMethodOption.pattern.value as string
     );
     f.print(makeJsDoc(method));
-    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createGetRequest}<${method.input.name}, ${method.output.name}>("${path}")}
+    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createGetRPC}<${method.input.name}, ${method.output.name}>("${path}")}
     `;
   }
 }

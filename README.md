@@ -4,10 +4,10 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 
 ## Philosophy
 
-The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to functions. The functions are named as `ServiceName_MethodName` and have following signature
+The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to object. The RPC objects are named as `ServiceName_MethodName` and have following signature
 
 ```TypeScript
-import type { Config, PreparesRequest } from "./runtime.ts";
+import type { RequestConfig, RPC } from "./runtime.ts";
 
 export type ServiceMethodRequest = {
   foo?: string;
@@ -17,35 +17,35 @@ export type ServiceMethodResponse = {
   bar?: string;
 }
 
-export const Service_Method = (config: Config) => (variables: ServiceMethodRequest): PreparedRequest<ServiceMethodResponse> => {
-  ...
-}
+export const Service_Method: {
+  createRequest: (config: RequestConfig) => (params: ServiceMethodRequest) => Request;
+  responseTypeId: (a: any): ServiceMethodResponse
+} = ...
 ```
 
-The `Config` is an object, which optionally provides base path and bearer token for the request.
+The RPC object contains two properties
 
-The `PreparedRequest` is an object, which contains a [Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) for fetch API and a `responseTypeId` function, which is an identity function[^1] that just assigns the type of the response. The intended use is
+- `createRequest` function which accepts `RequestConfig` with base path and bearer token and returns another function, which requires input parameter and return a [Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) that can be used directly with browser fetch API,
+- `responseTypeId` function which is an identity function[^1] that just assigns the type of the response. This function is not needed in plain JavaScript, it only provides type information for TypeScript.
 
 [^1]: Function which returns the argument `a => a`, i.e. does nothing
 
+The intended use is
+
 ```TypeScript
-const config: Config = {
+const config: RequestConfig = {
   basePath: "https://example.com/api/v1",
   bearerToken: () => virtualGetBearerToken()
 };
-
-const configuredServiceMethod = Service_Method(config)
 
 const variables: ServiceMethodRequest = {
   foo: "hello",
 }
 
-const { request, responseTypeId } = configuredServiceMethod(variables)
-
-const serviceMethodCall = fetch(request).then(response => {
+const serviceMethodCall = fetch(Service_Method.getRequest(config)(variables)).then(response => {
   if (response.ok) {
-    // type the response with the identity function, in non-TypeScript code, the `responseTypeId` is redundant
-    return response.json().then(responseTypeId)
+    // type the response with the identity function, in non-TypeScript code, the `.then` chain with `responseTypeId` is redundant
+    return response.json().then(Service_Method.responseTypeId)
   }
   // reject the non-succesfull (non 2xx status code) response or do other things
   return Promise.reject(response)
