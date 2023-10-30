@@ -32,7 +32,12 @@ export type RPC<RequestMessage, ResponseMessage> = {
   responseTypeId: (response: any) => ResponseMessage;
 };
 
-export const createGetRPC = <RequestMessage, ResponseMessage>(
+// taken from http.proto, the cusom method is not currently supported
+// @see https://github.com/googleapis/googleapis/blob/5ca19108a3251b1cb8dd5b246b37ce2eed2dc92f/google/api/http.proto#L324
+export type RequestMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
+
+export const createRPC = <RequestMessage, ResponseMessage>(
+  method: RequestMethod,
   path: string
 ): RPC<RequestMessage, ResponseMessage> => {
   const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
@@ -43,15 +48,24 @@ export const createGetRPC = <RequestMessage, ResponseMessage>(
       pathWithParams,
       config.basePath ?? window.location.href
     );
-    paramsMap?.forEach((value, key) => {
-      url.searchParams.set(key, value);
-    });
+    let body: string | undefined = undefined;
+    if (paramsMap) {
+      if (method === `GET`) {
+        paramsMap?.forEach((value, key) => {
+          url.searchParams.set(key, value);
+        });
+      } else {
+        body = JSON.stringify(Object.fromEntries(paramsMap));
+      }
+    }
+
     const bearerToken =
       typeof config.bearerToken === "function"
         ? config.bearerToken()
         : config.bearerToken;
     const request = new Request(url.href, {
-      method: "GET",
+      body,
+      method,
       headers: bearerToken
         ? { Authorization: `Bearer \${bearerToken}` }
         : undefined,

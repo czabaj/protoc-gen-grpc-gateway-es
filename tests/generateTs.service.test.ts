@@ -36,7 +36,7 @@ test(`should generate simple simple service`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createGetRPC } from "./runtime.js";
+      import { createRPC } from "./runtime.js";
     
       export type SimpleMessageRequest {
         foo?: string;
@@ -46,7 +46,7 @@ test(`should generate simple simple service`, async () => {
         bar?: number;
       }
       
-      export const SimpleService_GetSimpleMessage = createGetRPC<SimpleMessageRequest, SimpleMessageResponse>("/v1/simple_message");
+      export const SimpleService_GetSimpleMessage = createRPC<SimpleMessageRequest, SimpleMessageResponse>("GET", "/v1/simple_message");
       `
   );
 });
@@ -81,7 +81,7 @@ test(`should handle path with path parameter`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createGetRPC } from "./runtime.js";
+      import { createRPC } from "./runtime.js";
     
       export type WithPathParameterRequest {
         nameTest?: string;
@@ -91,7 +91,7 @@ test(`should handle path with path parameter`, async () => {
         bar?: number;
       }
       
-      export const WithPathParameterService_GetWithPathParameter = createGetRPC<WithPathParameterRequest, WithPathParameterResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
+      export const WithPathParameterService_GetWithPathParameter = createRPC<WithPathParameterRequest, WithPathParameterResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
       `
   );
 });
@@ -165,7 +165,7 @@ test(`should do proper linking when service reference other file`, async () => {
     outputFileService.content!,
     `
     import type { FlipMessage } from "./linking_resource_pb.js";
-    import { createGetRPC } from "./runtime.js";
+    import { createRPC } from "./runtime.js";
       
     export type GetLinkiedRequest {
       nameTest?: string;
@@ -175,7 +175,68 @@ test(`should do proper linking when service reference other file`, async () => {
       flip?: FlipMessage;
     }
     
-    export const LinkingService_GetLinkedResource = createGetRPC<GetLinkiedRequest, GetLinkedResponse>("/v1/{nameTest=projects/*/documents/*}:customMethod");
+    export const LinkingService_GetLinkedResource = createRPC<GetLinkiedRequest, GetLinkedResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
+      `
+  );
+});
+
+test(`should support non GET methods`, async () => {
+  const inputFileName = `non_get_http_methods.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+      import "google/api/annotations.proto";
+      import "google/protobuf/empty.proto";
+      
+      service AllHttpMethodsService {
+        rpc DeleteMethod(CommonRequest) returns (google.protobuf.Empty) {
+          option (google.api.http) = {delete: "/v1/{name_test=projects/*/documents/*}"};
+        };
+        rpc PatchMethod(CommonRequest) returns (CommonResponse) {
+          option (google.api.http) = {patch: "/v1/{name_test=projects/*/documents/*}"};
+        };
+        rpc PostMethod(CommonRequest) returns (CommonResponse) {
+          option (google.api.http) = {post: "/v1/{name_test=projects/*/documents/*}"};
+        };
+        rpc PutMethod(CommonRequest) returns (CommonResponse) {
+          option (google.api.http) = {put: "/v1/{name_test=projects/*/documents/*}"};
+        };
+      };
+      
+      message CommonRequest {
+        string name_test = 1;
+      };
+
+      message CommonResponse {
+        int32 bar = 1;
+      };
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+      import { createRPC } from "./runtime.js";
+    
+      export type CommonRequest {
+        nameTest?: string;
+      }
+      
+      export type CommonResponse {
+        bar?: number;
+      }
+      
+      export const AllHttpMethodsService_DeleteMethod = createRPC<CommonRequest, Empty>("DELETE", "/v1/{nameTest=projects/*/documents/*}");
+
+      export const AllHttpMethodsService_PatchMethod = createRPC<CommonRequest, CommonResponse>("PATCH", "/v1/{nameTest=projects/*/documents/*}");
+
+      export const AllHttpMethodsService_PostMethod = createRPC<CommonRequest, CommonResponse>("POST", "/v1/{nameTest=projects/*/documents/*}");
+
+      export const AllHttpMethodsService_PutMethod = createRPC<CommonRequest, CommonResponse>("PUT", "/v1/{nameTest=projects/*/documents/*}");
       `
   );
 });
