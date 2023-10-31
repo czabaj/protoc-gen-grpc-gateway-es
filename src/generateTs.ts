@@ -8,22 +8,25 @@ import {
 import { Schema } from "@bufbuild/protoplugin";
 import {
   type GeneratedFile,
+  type Printable,
   getFieldTyping,
   localName,
   makeJsDoc,
-  ImportSymbol,
 } from "@bufbuild/protoplugin/ecmascript";
 
 import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
 import {
-  asWKT,
   getGoogleapisFieldBehaviorOption,
   getGoogleapisHttpMethodOption,
   getOpenapiMessageOption,
+  isImportSymbol,
   pathParametersToLocal,
 } from "./helpers";
-import { type RuntimeFile, getRuntimeFileContent } from './runtime.macro' with { type: 'macro' };
+import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with { type: "macro" };
 
+/**
+ * Prints the runtime file and provides the reference to it's symbols.
+ */
 export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(getRuntimeFileContent());
@@ -31,6 +34,9 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   return { createRPC };
 };
 
+/**
+ * Prints an Enum.
+ */
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
   f.print(makeJsDoc(enumeration));
   f.print`export enum ${enumeration} {`;
@@ -42,6 +48,38 @@ function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
   f.print`}`;
 }
 
+/**
+ * The @bufbuild/protobuf library has it's own WKT types which we don't want to use, this function converts them to
+ * appropriate scalar types.
+ */
+function generateType(
+  typing: Printable,
+  required: boolean,
+  fieldBehavior: GoogleapisFieldBehavior | undefined
+): { type: Printable; nullable?: boolean } {
+  const type: Exclude<Printable, Printable[]> = !Array.isArray(typing)
+    ? typing
+    : typing.length === 1
+    ? (typing[0] as any)
+    : undefined;
+  if (type && isImportSymbol(type) && type.from === `@bufbuild/protobuf`) {
+    switch (type.name) {
+      default:
+        return { type: `string` };
+      case `Duration`:
+      case `Timestamp`:
+        // the Duration and Timestamp are serialized to string in gRPC-gateway, but we also need them to be nullable
+        // otherwiser it is impossible to unset such value.
+        return {
+          type: `string`,
+          nullable:
+            !required && fieldBehavior !== GoogleapisFieldBehavior.OUTPUT_ONLY,
+        };
+    }
+  }
+  return { type: typing };
+}
+
 function generateField(
   schema: Schema,
   f: GeneratedFile,
@@ -50,22 +88,18 @@ function generateField(
 ) {
   f.print(makeJsDoc(field));
   const { typing } = getFieldTyping(field, f);
-  const wktTyping = asWKT(typing);
   const googleapisFieldBehaviorOption = getGoogleapisFieldBehaviorOption(field);
   const required =
     openApiV2Required?.includes(field.name) ||
     googleapisFieldBehaviorOption === GoogleapisFieldBehavior.REQUIRED;
-
-  if (
-    wktTyping &&
-    !required &&
-    googleapisFieldBehaviorOption !== GoogleapisFieldBehavior.OUTPUT_ONLY
-  ) {
-    // whent WKT can be set from the client, it must be nullable
-    f.print`${localName(field)}?: ${wktTyping} | null;`;
-  } else {
-    f.print`${localName(field)}${required ? `` : `?`}: ${wktTyping || typing};`;
-  }
+  const { type, nullable } = generateType(
+    typing,
+    required,
+    googleapisFieldBehaviorOption
+  );
+  f.print`${localName(field)}${required ? "" : "?"}: ${type}${
+    !nullable ? "" : " | null"
+  };`;
 }
 
 // TODO: this currently prints all fields, like intersection, but we want to print union of types instead

@@ -15,23 +15,6 @@ import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/o
 import { HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
 import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
 
-/**
- * Protobuf-es converts the WKT to JavaScript classes, the gRPC-gateway does not do that, it mostly serializes to string
- * in specified format. This function detects the WKT and returns it's TypeScript type according to gRPC-gateway.
- */
-export const asWKT = (typing: Printable) => {
-  if (!Array.isArray(typing)) return typing;
-  const type = typing[0] as Exclude<Printable, Printable[]>;
-  if (isImportSymbol(type)) {
-    switch (type.name) {
-      case `Duration`:
-      case `Timestamp`:
-        return [`string`];
-    }
-  }
-  return undefined;
-};
-
 export const getOpenapiMessageOption = (message: DescMessage) => {
   const option = findCustomMessageOption(message, 1042, OpenApiV2Schema);
   return option;

@@ -240,3 +240,65 @@ test(`should support non GET methods`, async () => {
       `
   );
 });
+
+test(`should convert FieldMask type to string`, async () => {
+  const inputFileName = `field_mask_service.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+      import "google/api/annotations.proto";
+      import "google/api/client.proto";
+      import "google/api/field_behavior.proto";
+      import "google/protobuf/field_mask.proto";
+      
+      service FieldMaskService {
+        rpc UpdateMethod(UpdateMethodRequest) returns (UpdateMethodResponse) {
+          option (google.api.http) = {
+            patch: "/v1/{flip.name}",
+            body: "flip"
+          };
+          option (google.api.method_signature) = "flip,update_mask";
+        }
+      };
+
+      message FlipMessage {
+        string name = 1;
+      }
+      
+      message UpdateMethodRequest {
+        FlipMessage flip = 1 [(google.api.field_behavior) = REQUIRED];
+        google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = REQUIRED];
+      };
+
+      message UpdateMethodResponse {
+        FlipMessage flip = 1;
+      };
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+      import { createRPC } from "./runtime.js";
+
+      export type FlipMessage {
+        name?: string;
+      }
+    
+      export type UpdateMethodRequest {
+        flip: FlipMessage;
+        updateMask: string; // the updateMask should be a string
+      }
+      
+      export type UpdateMethodResponse {
+        flip?: FlipMessage;
+      }
+      
+      export const FieldMaskService_UpdateMethod = createRPC<UpdateMethodRequest, UpdateMethodResponse>("PATCH", "/v1/{flip.name}");
+      `
+  );
+});

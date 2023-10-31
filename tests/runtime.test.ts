@@ -13,7 +13,7 @@ test(`should replace path parameters`, () => {
 });
 
 test(`should handle nested path parameters`, () => {
-  const path = "/v1/{flip.flap.flop=*}/{message_id}";
+  const path = "/v1/{flip.flap.flop}/{message_id}";
   const parameters = {
     flip: { flap: { flop: `flup` } },
     message_id: "XYZ",
