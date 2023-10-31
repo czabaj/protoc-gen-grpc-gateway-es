@@ -61,3 +61,12 @@ test(`should set Bearer token if provided as a function`, () => {
   })(undefined);
   expect(request.headers.get("Authorization")).toBe(`Bearer psst!`);
 });
+
+test(`should prepend full URL basePath`, () => {
+  const path = `/v1/flip`;
+  const rpc = createRPC(`GET`, path);
+  const request = rpc.createRequest({
+    basePath: `https://example.test/api`,
+  })(undefined);
+  expect(request.url).toBe(`https://example.test/api/v1/flip`);
+});

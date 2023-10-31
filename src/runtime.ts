@@ -24,6 +24,15 @@ export const unset = (obj: Record<string, any>, keys: string) => {
   }
 };
 
+const leadingSlashRe = /^\/+/;
+export const removeLeadingSlash = (path: string) => {
+  return path.replace(leadingSlashRe, ``);
+};
+
+export const addTrailingSlash = (path: string) => {
+  return path.endsWith(`/`) ? path : `${path}/`;
+};
+
 export const isScalarType = (
   value: any
 ): value is boolean | number | string => {
@@ -95,10 +104,14 @@ export const createRPC = <RequestMessage, ResponseMessage>(
   const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
     let paramsClone = params && { ...params };
     const pathWithParams = replacePathParameters(path, paramsClone);
-    const url = new URL(
-      pathWithParams,
-      config.basePath ?? window.location.href
-    );
+    // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
+    // part of the base path will be used :/
+    const url = config.basePath
+      ? new URL(
+          removeLeadingSlash(pathWithParams),
+          addTrailingSlash(config.basePath)
+        )
+      : new URL(pathWithParams, window.location.href);
 
     let body: string | undefined = undefined;
     if (params && httpMethod !== `GET`) {
