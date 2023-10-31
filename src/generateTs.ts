@@ -69,7 +69,7 @@ function generateType(
       case `Duration`:
       case `Timestamp`:
         // the Duration and Timestamp are serialized to string in gRPC-gateway, but we also need them to be nullable
-        // otherwiser it is impossible to unset such value.
+        // otherwiser it is impossible to unset them.
         return {
           type: `string`,
           nullable:
@@ -102,33 +102,40 @@ function generateField(
   };`;
 }
 
-// TODO: this currently prints all fields, like intersection, but we want to print union of types instead
-function generateOneof(schema: Schema, f: GeneratedFile, oneof: DescOneof) {
-  for (const field of oneof.fields) {
-    generateField(schema, f, field);
-  }
-}
-
 function generateMessage(
   schema: Schema,
   f: GeneratedFile,
   message: DescMessage
 ) {
+  const oneOfs: DescOneof[] = [];
   const openApiV2Schema = getOpenapiMessageOption(message);
   f.print(makeJsDoc(message));
   f.print`export type ${message} = {`;
   for (const member of message.members) {
     switch (member.kind) {
       case "oneof":
-        generateOneof(schema, f, member);
+        oneOfs.push(member);
         break;
       default:
         generateField(schema, f, member, openApiV2Schema?.jsonSchema?.required);
         break;
     }
-    f.print();
   }
   f.print`}`;
+  if (oneOfs.length > 0) {
+    for (const oneOf of oneOfs) {
+      f.print` & (`;
+      for (let i = 0, l = oneOf.fields.length; i < l; i++) {
+        let field = oneOf.fields[i];
+        if (i > 0) f.print` | `;
+        f.print`{ `;
+        generateField(schema, f, field);
+        f.print` }`;
+      }
+      f.print`)`
+    }
+  }
+  f.print`;`;
   for (const nestedEnum of message.nestedEnums) {
     generateEnum(schema, f, nestedEnum);
   }

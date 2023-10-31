@@ -57,6 +57,7 @@ export const replacePathParameters = <RequestMessage>(
         `path parameter "${parameterPath}" must be a string, received "${value}" which is "${typeof value}"`
       );
     }
+    // TODO: we can validate the value against the pattern specified in the path
     unset(requestMessage!, parameterPath);
     return value;
   });

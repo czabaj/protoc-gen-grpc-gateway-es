@@ -38,11 +38,11 @@ test(`should generate simple simple service`, async () => {
     `
       import { createRPC } from "./runtime.js";
     
-      export type SimpleMessageRequest {
+      export type SimpleMessageRequest = {
         foo?: string;
       }
       
-      export type SimpleMessageResponse {
+      export type SimpleMessageResponse = {
         bar?: number;
       }
       
@@ -83,11 +83,11 @@ test(`should handle path with path parameter`, async () => {
     `
       import { createRPC } from "./runtime.js";
     
-      export type WithPathParameterRequest {
+      export type WithPathParameterRequest = {
         nameTest?: string;
       }
       
-      export type WithPathParameterResponse {
+      export type WithPathParameterResponse = {
         bar?: number;
       }
       
@@ -156,7 +156,7 @@ test(`should do proper linking when service reference other file`, async () => {
         FLOP = 'FLOP',
       }
       
-      export type FlipMessage {
+      export type FlipMessage = {
         flip?: FlipEnum;
       }
       `
@@ -167,11 +167,11 @@ test(`should do proper linking when service reference other file`, async () => {
     import type { FlipMessage } from "./linking_resource_pb.js";
     import { createRPC } from "./runtime.js";
       
-    export type GetLinkiedRequest {
+    export type GetLinkiedRequest = {
       nameTest?: string;
     }
     
-    export type GetLinkedResponse {
+    export type GetLinkedResponse = {
       flip?: FlipMessage;
     }
     
@@ -222,11 +222,11 @@ test(`should support non GET methods`, async () => {
     `
       import { createRPC } from "./runtime.js";
     
-      export type CommonRequest {
+      export type CommonRequest = {
         nameTest?: string;
       }
       
-      export type CommonResponse {
+      export type CommonResponse = {
         bar?: number;
       }
       
@@ -285,16 +285,16 @@ test(`should convert FieldMask type to string`, async () => {
     `
       import { createRPC } from "./runtime.js";
 
-      export type FlipMessage {
+      export type FlipMessage = {
         name?: string;
       }
     
-      export type UpdateMethodRequest {
+      export type UpdateMethodRequest = {
         flip: FlipMessage;
         updateMask: string; // the updateMask should be a string
       }
       
-      export type UpdateMethodResponse {
+      export type UpdateMethodResponse = {
         flip?: FlipMessage;
       }
       

@@ -25,7 +25,7 @@ message SimpleMessage {
   assertTypeScript(
     outputFile.content!,
     `
-export type SimpleMessage {
+export type SimpleMessage = {
   foo?: string;
   bar?: number;
   baz?: boolean;
@@ -60,7 +60,7 @@ message OptionMessage {
   assertTypeScript(
     outputFile.content!,
     `
-export type OptionMessage {
+export type OptionMessage = {
   foo: string;
   bar?: number;
 }`
@@ -89,12 +89,12 @@ message MessageB {
   assertTypeScript(
     outputFile.content!,
     `
-export type MessageA {
+export type MessageA = {
   foo?: string;
   bar?: MessageB;
 }
 
-export type MessageB {
+export type MessageB = {
   bar?: string;
 }`
   );
@@ -123,10 +123,46 @@ message MessageWKT {
   assertTypeScript(
     outputFile.content!,
     `
-export type MessageWKT {
+export type MessageWKT = {
   foo?: string;
   duration?: string | null;
   timestamp?: string;
 }`
+  );
+});
+
+test(`should handle oneof`, async () => {
+  const inputFileName = `one_of_test.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+      
+message OneOfTest {
+  string flip = 1;
+  int32 flap = 2;
+  oneof toss {
+    string heads = 3;
+    int32 tails = 4;
+  }
+  oneof hand {
+    bool left = 5;
+    bool right = 6;
+  }
+}`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type OneOfTest = 
+{
+  flip?: string;
+  flap?: number;
+}
+& ({ heads?: string } | { tails?: number })
+& ({ left?: boolean } | { right?: boolean });`
   );
 });
