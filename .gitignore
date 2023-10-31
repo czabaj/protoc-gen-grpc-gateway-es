@@ -174,3 +174,9 @@ dist
 
 # temporary test files
 /tests/proto/*.proto
+
+# temporary build files
+/.*bun-build
+
+# dist folder
+/dist/

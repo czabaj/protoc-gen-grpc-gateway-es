@@ -22,15 +22,11 @@ import {
   getOpenapiMessageOption,
   pathParametersToLocal,
 } from "./helpers";
+import { type RuntimeFile, getRuntimeFileContent } from './runtime.macro' with { type: 'macro' };
 
-const runtimeFile = Bun.file(new URL("./runtime.ts", import.meta.url).pathname);
-const runtimeFileContent = await runtimeFile.text();
-type RuntimeFile = {
-  createRPC: ImportSymbol;
-};
 export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
-  file.print(runtimeFileContent);
+  file.print(getRuntimeFileContent());
   const createRPC = file.export(`createRPC`);
   return { createRPC };
 };
@@ -130,7 +126,7 @@ function generateService(
       googleapisHttpMethodOption.pattern.value as string
     );
     f.print(makeJsDoc(method));
-    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createRPC}<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}")}
+    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createRPC}<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}")
     `;
   }
 }

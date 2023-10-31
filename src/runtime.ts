@@ -12,7 +12,7 @@ export const replacePathParameters = (
     }
     if (typeof value !== "string") {
       throw new Error(
-        `path parameter "${parameterName}" must be a string, received "${value}" which is a ${typeof value}"`
+        `path parameter "${parameterName}" must be a string, received "${value}" which is "${typeof value}"`
       );
     }
     paramsMap!.delete(parameterName);
@@ -32,7 +32,7 @@ export type RPC<RequestMessage, ResponseMessage> = {
   responseTypeId: (response: any) => ResponseMessage;
 };
 
-// taken from http.proto, the cusom method is not currently supported
+// taken from http.proto, only the cusom method is not currently supported
 // @see https://github.com/googleapis/googleapis/blob/5ca19108a3251b1cb8dd5b246b37ce2eed2dc92f/google/api/http.proto#L324
 export type RequestMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
 
@@ -48,6 +48,7 @@ export const createRPC = <RequestMessage, ResponseMessage>(
       pathWithParams,
       config.basePath ?? window.location.href
     );
+    
     let body: string | undefined = undefined;
     if (paramsMap) {
       if (method === `GET`) {
@@ -59,16 +60,22 @@ export const createRPC = <RequestMessage, ResponseMessage>(
       }
     }
 
+    const headers = new Headers();
+    if (body) {
+      headers.set("Content-Type", "application/json");
+    }
     const bearerToken =
       typeof config.bearerToken === "function"
         ? config.bearerToken()
         : config.bearerToken;
+    if (bearerToken) {
+      headers.set("Authorization", `Bearer ${bearerToken}`);
+    }
+
     const request = new Request(url.href, {
       body,
       method,
-      headers: bearerToken
-        ? { Authorization: `Bearer \${bearerToken}` }
-        : undefined,
+      headers,
     });
     return request;
   };

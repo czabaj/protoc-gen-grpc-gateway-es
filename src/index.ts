@@ -1,4 +1,4 @@
-import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
+import { createEcmaScriptPlugin, runNodeJs } from "@bufbuild/protoplugin";
 
 import { generateTs } from "./generateTs.js";
 import pkg from "../package.json";
@@ -8,3 +8,5 @@ export const protocGenGrpcGatewayTsClient = createEcmaScriptPlugin({
   version: `v${pkg.version}`,
   generateTs,
 });
+
+runNodeJs(protocGenGrpcGatewayTsClient);
