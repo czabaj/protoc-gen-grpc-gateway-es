@@ -76,12 +76,20 @@ export type RPC<RequestMessage, ResponseMessage> = {
 
 // taken from http.proto, only the cusom method is not currently supported
 // @see https://github.com/googleapis/googleapis/blob/5ca19108a3251b1cb8dd5b246b37ce2eed2dc92f/google/api/http.proto#L324
-export type RequestMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
+export type HttpMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
 
+/**
+ * Provides two basic functions
+ * - `createRequest` which accepts a request message and returns a `Request` object, and
+ * - `responseTypeId` which is just identity function that types the argument as appropriate `ResponseMessage`
+ * @param httpMethod - the HTTP method of the RPC, read from the `google.api.http` option.
+ * @param path - the URL of the RPC, read from the `google.api.http` option, may include path parameters.
+ * @param bodyKey - an optional key to nested property of the request message that should be used as the request body.
+ */
 export const createRPC = <RequestMessage, ResponseMessage>(
-  method: RequestMethod,
+  httpMethod: HttpMethod,
   path: string,
-  bodyPath?: string
+  bodyKey?: string
 ): RPC<RequestMessage, ResponseMessage> => {
   const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
     let paramsClone = params && { ...params };
@@ -92,13 +100,13 @@ export const createRPC = <RequestMessage, ResponseMessage>(
     );
 
     let body: string | undefined = undefined;
-    if (params && method !== `GET`) {
-      if (bodyPath) {
-        body = JSON.stringify(get(params, bodyPath));
-        unset(paramsClone!, bodyPath);
+    if (params && httpMethod !== `GET`) {
+      if (bodyKey) {
+        body = JSON.stringify(get(params, bodyKey));
+        unset(paramsClone!, bodyKey);
       } else {
         body = JSON.stringify(params);
-        paramsClone = {} as any;
+        paramsClone = undefined as any;
       }
     }
 
@@ -124,7 +132,7 @@ export const createRPC = <RequestMessage, ResponseMessage>(
 
     const request = new Request(url.href, {
       body,
-      method,
+      method: httpMethod,
       headers,
     });
     return request;

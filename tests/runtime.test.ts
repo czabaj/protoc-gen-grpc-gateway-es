@@ -41,3 +41,23 @@ test(`should properly distribute path parameters`, async () => {
   // the body should contain the `flip` object, b/c/ the `bodyPath` was set to `flip`
   expect(bodyContent).toBe(JSON.stringify(parameters.flip));
 });
+
+test(`should set Bearer token if provided as a string in config`, () => {
+  const path = `/v1/flip`;
+  const rpc = createRPC(`GET`, path);
+  const request = rpc.createRequest({
+    basePath: `https://example.test`,
+    bearerToken: `secret`,
+  })(undefined);
+  expect(request.headers.get("Authorization")).toBe(`Bearer secret`);
+});
+
+test(`should set Bearer token if provided as a function`, () => {
+  const path = `/v1/flip`;
+  const rpc = createRPC(`GET`, path);
+  const request = rpc.createRequest({
+    basePath: `https://example.test`,
+    bearerToken: () => `psst!`,
+  })(undefined);
+  expect(request.headers.get("Authorization")).toBe(`Bearer psst!`);
+});
