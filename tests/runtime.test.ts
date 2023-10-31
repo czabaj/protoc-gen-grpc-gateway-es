@@ -24,3 +24,20 @@ test(`should handle nested path parameters`, () => {
   );
   expect(request.url).toBe(`https://example.test/v1/flup/XYZ`);
 });
+
+test(`should properly distribute path parameters`, async () => {
+  const path = `/v1/{flip.name}`;
+  const parameters = {
+    flip: { name: `flap`, flop: `flup` },
+    updateMask: `flop.flup`,
+  };
+  const rpc = createRPC(`PATCH`, path, "flip");
+  const request = rpc.createRequest({ basePath: `https://example.test` })(
+    parameters
+  );
+  // the `flip.name` should be in the path, the `updateMask` should be in the queryString
+  expect(request.url).toBe(`https://example.test/v1/flap?updateMask=flop.flup`);
+  const bodyContent = await new Response(request.body).text();
+  // the body should contain the `flip` object, b/c/ the `bodyPath` was set to `flip`
+  expect(bodyContent).toBe(JSON.stringify(parameters.flip));
+});

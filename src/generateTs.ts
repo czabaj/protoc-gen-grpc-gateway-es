@@ -159,9 +159,16 @@ function generateService(
     const path = pathParametersToLocal(
       googleapisHttpMethodOption.pattern.value as string
     );
+    const bodyPath =
+      googleapisHttpMethodOption.body && googleapisHttpMethodOption.body !== "*"
+        ? googleapisHttpMethodOption.body
+        : undefined;
     f.print(makeJsDoc(method));
-    f.print`export const ${service.name}_${method.name} = ${runtimeFile.createRPC}<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}")
-    `;
+    f.print`export const ${service.name}_${method.name} = ${
+      runtimeFile.createRPC
+    }<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}"${
+      bodyPath ? `, "${bodyPath}"` : ""
+    });`;
   }
 }
 

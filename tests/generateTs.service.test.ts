@@ -298,7 +298,7 @@ test(`should convert FieldMask type to string`, async () => {
         flip?: FlipMessage;
       }
       
-      export const FieldMaskService_UpdateMethod = createRPC<UpdateMethodRequest, UpdateMethodResponse>("PATCH", "/v1/{flip.name}");
+      export const FieldMaskService_UpdateMethod = createRPC<UpdateMethodRequest, UpdateMethodResponse>("PATCH", "/v1/{flip.name}", "flip");
       `
   );
 });

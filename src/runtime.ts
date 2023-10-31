@@ -24,6 +24,18 @@ export const unset = (obj: Record<string, any>, keys: string) => {
   }
 };
 
+export const isScalarType = (
+  value: any
+): value is boolean | number | string => {
+  switch (typeof value) {
+    case `object`:
+    case `undefined`:
+      return false;
+    default:
+      return true;
+  }
+};
+
 const pathParameterRe = /{([^}]+)}/g;
 /**
  * Replaces path parameters in the path with values from the request message. It also removes the consumed parameters
@@ -68,10 +80,11 @@ export type RequestMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
 
 export const createRPC = <RequestMessage, ResponseMessage>(
   method: RequestMethod,
-  path: string
+  path: string,
+  bodyPath?: string
 ): RPC<RequestMessage, ResponseMessage> => {
   const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
-    const paramsClone = params && { ...params };
+    let paramsClone = params && { ...params };
     const pathWithParams = replacePathParameters(path, paramsClone);
     const url = new URL(
       pathWithParams,
@@ -79,13 +92,21 @@ export const createRPC = <RequestMessage, ResponseMessage>(
     );
 
     let body: string | undefined = undefined;
-    if (params) {
-      if (method === `GET`) {
-        for (const [k, v] of Object.entries(paramsClone)) {
-          url.searchParams.set(k, String(v));
-        }
+    if (params && method !== `GET`) {
+      if (bodyPath) {
+        body = JSON.stringify(get(params, bodyPath));
+        unset(paramsClone!, bodyPath);
       } else {
         body = JSON.stringify(params);
+        paramsClone = {} as any;
+      }
+    }
+
+    if (paramsClone) {
+      for (const [k, v] of Object.entries(paramsClone)) {
+        if (isScalarType(v)) {
+          url.searchParams.set(k, String(v));
+        }
       }
     }
 
