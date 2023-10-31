@@ -166,3 +166,31 @@ export type OneOfTest =
 & ({ left?: boolean } | { right?: boolean });`
   );
 });
+
+test(`should handle repeated well-known type`, async () => {
+  const inputFileName = `repeated_well_known.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/field_behavior.proto";
+
+message MessageRepeatedWKT {
+  string flip = 1;
+  repeated google.protobuf.Timestamp timestamp = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type MessageRepeatedWKT = {
+  flip?: string;
+  timestamp?: string[];
+}`
+  );
+});

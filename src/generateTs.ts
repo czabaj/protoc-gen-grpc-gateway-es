@@ -57,13 +57,17 @@ function generateType(
   required: boolean,
   fieldBehavior: GoogleapisFieldBehavior | undefined
 ): { type: Printable; nullable?: boolean } {
-  const type: Exclude<Printable, Printable[]> = !Array.isArray(typing)
-    ? typing
-    : typing.length === 1
-    ? (typing[0] as any)
-    : undefined;
-  if (type && isImportSymbol(type) && type.from === `@bufbuild/protobuf`) {
-    switch (type.name) {
+  if (Array.isArray(typing)) {
+    // in case of an array, there is _usually_ the type in first position and there can be an array `[]` notation at the
+    // second position, so we are just intereseted in the first position. Let's see how far this will get us.
+    const resolved = generateType(typing[0], required, fieldBehavior);
+    return {
+      type: [resolved.type, ...typing.slice(1)],
+      nullable: resolved.nullable,
+    };
+  }
+  if (isImportSymbol(typing) && typing.from === `@bufbuild/protobuf`) {
+    switch (typing.name) {
       default:
         return { type: `string` };
       case `Duration`:
@@ -132,7 +136,7 @@ function generateMessage(
         generateField(schema, f, field);
         f.print` }`;
       }
-      f.print`)`
+      f.print`)`;
     }
   }
   f.print`;`;
