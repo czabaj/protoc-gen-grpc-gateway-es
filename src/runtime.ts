@@ -1,21 +1,51 @@
-const pathParameterRe = /{([^}]+)}/g;
+/**
+ * Retrieves property from an object with path specified by dot notation.
+ */
+export const get = (obj: Record<string, any>, keys: string) => {
+  const segments = keys.split(".");
+  let value = obj;
+  do {
+    value = value[segments.shift()!];
+  } while (typeof value === `object` && value && segments.length);
+  return value;
+};
 
-export const replacePathParameters = (
+/**
+ * Deletes property from an object with path specified by dot notation.
+ */
+export const unset = (obj: Record<string, any>, keys: string) => {
+  const segments = keys.split(".");
+  let parent = obj;
+  while (typeof parent === `object` && parent && segments.length > 1) {
+    parent = parent[segments.shift()!];
+  }
+  if (typeof parent === `object` && parent && segments.length === 1) {
+    delete parent[segments[0]];
+  }
+};
+
+const pathParameterRe = /{([^}]+)}/g;
+/**
+ * Replaces path parameters in the path with values from the request message. It also removes the consumed parameters
+ * from the request message, so the object passed in is mutated and contains only the remaining fields.
+ */
+export const replacePathParameters = <RequestMessage>(
   path: string,
-  paramsMap?: Map<string, unknown>
+  requestMessage?: RequestMessage
 ) => {
   return path.replace(pathParameterRe, (_a, c1) => {
-    const parameterName = c1.split("=", 2)[0];
-    const value = paramsMap?.get(parameterName);
+    const parameterPath = c1.split("=", 2)[0] as string;
+    // the path might contain dot notaion to nested fields
+    const value = requestMessage && get(requestMessage, parameterPath);
     if (value == null) {
-      throw new Error(`missing path parameter: ${parameterName}`);
+      throw new Error(`missing path parameter: ${parameterPath}`);
     }
     if (typeof value !== "string") {
       throw new Error(
-        `path parameter "${parameterName}" must be a string, received "${value}" which is "${typeof value}"`
+        `path parameter "${parameterPath}" must be a string, received "${value}" which is "${typeof value}"`
       );
     }
-    paramsMap!.delete(parameterName);
+    unset(requestMessage!, parameterPath);
     return value;
   });
 };
@@ -41,22 +71,21 @@ export const createRPC = <RequestMessage, ResponseMessage>(
   path: string
 ): RPC<RequestMessage, ResponseMessage> => {
   const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
-    const paramsMap =
-      params && (new Map(Object.entries(params)) as Map<string, string>);
-    const pathWithParams = replacePathParameters(path, paramsMap);
+    const paramsClone = params && { ...params };
+    const pathWithParams = replacePathParameters(path, paramsClone);
     const url = new URL(
       pathWithParams,
       config.basePath ?? window.location.href
     );
-    
+
     let body: string | undefined = undefined;
-    if (paramsMap) {
+    if (params) {
       if (method === `GET`) {
-        paramsMap?.forEach((value, key) => {
-          url.searchParams.set(key, value);
-        });
+        for (const [k, v] of Object.entries(paramsClone)) {
+          url.searchParams.set(k, String(v));
+        }
       } else {
-        body = JSON.stringify(Object.fromEntries(paramsMap));
+        body = JSON.stringify(params);
       }
     }
 
