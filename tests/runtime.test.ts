@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { createRPC, replacePathParameters } from "../src/runtime";
+import { RPC, replacePathParameters } from "../src/runtime";
 
 test(`should replace path parameters`, () => {
   const path = "/v1/{name=projects/*/documents/*}/{message_id}";
@@ -18,7 +18,7 @@ test(`should handle nested path parameters`, () => {
     flip: { flap: { flop: `flup` } },
     message_id: "XYZ",
   };
-  const rpc = createRPC(`POST`, path);
+  const rpc = new RPC(`POST`, path);
   const request = rpc.createRequest({ basePath: `https://example.test` })(
     parameters
   );
@@ -31,7 +31,7 @@ test(`should properly distribute path parameters`, async () => {
     flip: { name: `flap`, flop: `flup` },
     updateMask: `flop.flup`,
   };
-  const rpc = createRPC(`PATCH`, path, "flip");
+  const rpc = new RPC(`PATCH`, path, "flip");
   const request = rpc.createRequest({ basePath: `https://example.test` })(
     parameters
   );
@@ -44,7 +44,7 @@ test(`should properly distribute path parameters`, async () => {
 
 test(`should set Bearer token if provided as a string in config`, () => {
   const path = `/v1/flip`;
-  const rpc = createRPC(`GET`, path);
+  const rpc = new RPC(`GET`, path);
   const request = rpc.createRequest({
     basePath: `https://example.test`,
     bearerToken: `secret`,
@@ -54,7 +54,7 @@ test(`should set Bearer token if provided as a string in config`, () => {
 
 test(`should set Bearer token if provided as a function`, () => {
   const path = `/v1/flip`;
-  const rpc = createRPC(`GET`, path);
+  const rpc = new RPC(`GET`, path);
   const request = rpc.createRequest({
     basePath: `https://example.test`,
     bearerToken: () => `psst!`,
@@ -64,7 +64,7 @@ test(`should set Bearer token if provided as a function`, () => {
 
 test(`should prepend full URL basePath`, () => {
   const path = `/v1/flip`;
-  const rpc = createRPC(`GET`, path);
+  const rpc = new RPC(`GET`, path);
   const request = rpc.createRequest({
     basePath: `https://example.test/api`,
   })(undefined);

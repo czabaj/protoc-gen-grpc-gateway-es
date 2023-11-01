@@ -77,80 +77,95 @@ export type RequestConfig = {
   bearerToken?: string | (() => string);
 };
 
-export type RPC<RequestMessage, ResponseMessage> = {
-  createRequest: (
-    config: RequestConfig
-  ) => (variables: RequestMessage) => Request;
-  responseTypeId: (response: any) => ResponseMessage;
-};
-
 // taken from http.proto, only the cusom method is not currently supported
 // @see https://github.com/googleapis/googleapis/blob/5ca19108a3251b1cb8dd5b246b37ce2eed2dc92f/google/api/http.proto#L324
 export type HttpMethod = `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
 
-/**
- * Provides two basic functions
- * - `createRequest` which accepts a request message and returns a `Request` object, and
- * - `responseTypeId` which is just identity function that types the argument as appropriate `ResponseMessage`
- * @param httpMethod - the HTTP method of the RPC, read from the `google.api.http` option.
- * @param path - the URL of the RPC, read from the `google.api.http` option, may include path parameters.
- * @param bodyKey - an optional key to nested property of the request message that should be used as the request body.
- */
-export const createRPC = <RequestMessage, ResponseMessage>(
-  httpMethod: HttpMethod,
-  path: string,
-  bodyKey?: string
-): RPC<RequestMessage, ResponseMessage> => {
-  const createRequest = (config: RequestConfig) => (params: RequestMessage) => {
-    let paramsClone = params && { ...params };
-    const pathWithParams = replacePathParameters(path, paramsClone);
-    // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
-    // part of the base path will be used :/
-    const url = config.basePath
-      ? new URL(
-          removeLeadingSlash(pathWithParams),
-          addTrailingSlash(config.basePath)
-        )
-      : new URL(pathWithParams, window.location.href);
+export class RPC<RequestMessage, ResponseMessage> {
+  /**
+   * HTTP method of the RPC as described by the google.api.http option
+   */
+  readonly method: HttpMethod;
+  /**
+   * URL path of the RPC as described by the google.api.http option
+   */
+  readonly path: string;
+  /**
+   * Optional: the path to body in RequestMessage, if specified by the google.api.http option
+   */
+  readonly bodyKey?: string;
 
-    let body: string | undefined = undefined;
-    if (params && httpMethod !== `GET`) {
-      if (bodyKey) {
-        body = JSON.stringify(get(params, bodyKey));
-        unset(paramsClone!, bodyKey);
-      } else {
-        body = JSON.stringify(params);
-        paramsClone = undefined as any;
-      }
-    }
+  constructor(method: HttpMethod, path: string, bodyKey?: string) {
+    this.method = method;
+    this.path = path;
+    this.bodyKey = bodyKey;
+  }
 
-    if (paramsClone) {
-      for (const [k, v] of Object.entries(paramsClone)) {
-        if (isScalarType(v)) {
-          url.searchParams.set(k, String(v));
+  /**
+   * Creates a JavaScript Request object which can be used directly with fetch API. If you are using other HTTP client,
+   * you can read the request properties from the Request object.
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/Request
+   * @param config the request configuration for the RPC
+   * @param params the request message for the RPC as defined in the proto file
+   */
+  createRequest(config: RequestConfig): (params: RequestMessage) => Request {
+    return (params) => {
+      let paramsClone = params && { ...params };
+      const pathWithParams = replacePathParameters(this.path, paramsClone);
+      // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
+      // part of the base path will be used :/
+      const url = config.basePath
+        ? new URL(
+            removeLeadingSlash(pathWithParams),
+            addTrailingSlash(config.basePath)
+          )
+        : new URL(pathWithParams, window.location.href);
+
+      let body: string | undefined = undefined;
+      if (params && this.method !== `GET`) {
+        if (this.bodyKey) {
+          body = JSON.stringify(get(params, this.bodyKey));
+          unset(paramsClone!, this.bodyKey);
+        } else {
+          body = JSON.stringify(params);
+          paramsClone = undefined as any;
         }
       }
-    }
 
-    const headers = new Headers();
-    if (body) {
-      headers.set("Content-Type", "application/json");
-    }
-    const bearerToken =
-      typeof config.bearerToken === "function"
-        ? config.bearerToken()
-        : config.bearerToken;
-    if (bearerToken) {
-      headers.set("Authorization", `Bearer ${bearerToken}`);
-    }
+      if (paramsClone) {
+        for (const [k, v] of Object.entries(paramsClone)) {
+          if (isScalarType(v)) {
+            url.searchParams.set(k, String(v));
+          }
+        }
+      }
 
-    const request = new Request(url.href, {
-      body,
-      method: httpMethod,
-      headers,
-    });
-    return request;
-  };
-  const responseTypeId = (response: any) => response as ResponseMessage;
-  return { createRequest, responseTypeId };
-};
+      const headers = new Headers();
+      if (body) {
+        headers.set("Content-Type", "application/json");
+      }
+      const bearerToken =
+        typeof config.bearerToken === "function"
+          ? config.bearerToken()
+          : config.bearerToken;
+      if (bearerToken) {
+        headers.set("Authorization", `Bearer ${bearerToken}`);
+      }
+
+      const request = new Request(url.href, {
+        body,
+        method: this.method,
+        headers,
+      });
+      return request;
+    };
+  }
+
+  /**
+   * Simple identity function that just types the input as ResponseMessage.
+   * Usefull for TypeScript code to assing a type to the response.
+   */
+  responseTypeId(response: any): ResponseMessage {
+    return response as ResponseMessage;
+  }
+}

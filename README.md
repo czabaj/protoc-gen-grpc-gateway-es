@@ -4,27 +4,37 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 
 ## Philosophy
 
-The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to object. The RPC objects are exported as `ServiceName_MethodName` and have following signature
+The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to RPC JavaScript classes. The RPC classes are exported as `ServiceName_MethodName` and have following signature
 
 ```TypeScript
-export type RPC<RequestMessage, ResponseMessage> = {
-  createRequest: (
-    config: RequestConfig
-  ) => (variables: RequestMessage) => Request;
-  responseTypeId: (response: any) => ResponseMessage;
+class RPC<RequestMessage, ResponseMessage> = {
+  // HTTP method of the RPC as described by the google.api.http option
+  readonly method: `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
+  // URL path of the RPC as described by the google.api.http option
+  readonly path: string;
+  // Optional: the path to body in RequestMessage, if specified by the google.api.http option
+  readonly bodyKey?: string;
+  /**
+   * Creates a JavaScript Request object which can be used directly with fetch API. If you are using other HTTP client,
+   * you can read the request properties from the Request object.
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/Request
+   * @param config the request configuration for the RPC
+   * @param params the request message for the RPC as defined in the proto file
+   */
+  createRequest: (c: RequestConfig) => (p: RequestMessage) => Request;
+  /**
+   * Simple identity function that just types the input as ResponseMessage.
+   * Usefull for TypeScript code to assing a type to the response.
+   */
+  responseTypeId: (r: any) => ResponseMessage;
 };
 ```
-
-The RPC object contains two properties
-
-- `createRequest` function which accepts `RequestConfig` with base path and bearer token and returns another function, which requires input parameter and return a [JavaScript Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) that can be used directly with browser fetch API,
-- `responseTypeId` function which is an identity function[^1] that just assigns the type of the response. This function is not needed in plain JavaScript, it just provides type information for TypeScript.
-
-[^1]: Function which returns the argument `a => a`, i.e. does nothing
 
 The intended use is
 
 ```TypeScript
+import { SomeService_SomeMethod } from "./gen/someService_pb.ts";
+
 const requestConfig: RequestConfig = {
   basePath: "https://example.com/api/v1",
   bearerToken: () => virtualGetBearerToken()
@@ -37,17 +47,15 @@ const variables: ServiceMethodRequest = {
 // this is not required, but let's say we want to be able to abort the request
 const abortController = new AbortController();
 
-const serviceMethodCall = fetch(rpc.getRequest(config)(variables), { signal: abortController.signal }).then(response => {
+const serviceMethodCall = fetch(SomeService_SomeMethod.getRequest(config)(variables), { signal: abortController.signal }).then(response => {
   if (response.ok) {
     // type the response with the identity function, in non-TypeScript code, the `.then` chain with `responseTypeId` is redundant
-    return response.json().then(rpc.responseTypeId)
+    return response.json().then(SomeService_SomeMethod.responseTypeId)
   }
   // reject the non-succesfull (non 2xx status code) response or do other things
   return Promise.reject(response)
 })
 ```
-
-If you don't want to use the fetch API, you can just read URL and body and headers from the [Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) and pass it to `axios` or whichever library you are using in the browser.
 
 ## Development
 

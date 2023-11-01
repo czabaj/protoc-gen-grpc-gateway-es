@@ -36,7 +36,7 @@ test(`should generate simple simple service`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createRPC } from "./runtime.js";
+      import { RPC } from "./runtime.js";
     
       export type SimpleMessageRequest = {
         foo?: string;
@@ -45,8 +45,8 @@ test(`should generate simple simple service`, async () => {
       export type SimpleMessageResponse = {
         bar?: number;
       }
-      
-      export const SimpleService_GetSimpleMessage = createRPC<SimpleMessageRequest, SimpleMessageResponse>("GET", "/v1/simple_message");
+
+      export const SimpleService_GetSimpleMessage = new RPC<SimpleMessageRequest, SimpleMessageResponse>("GET", "/v1/simple_message");
       `
   );
 });
@@ -81,7 +81,7 @@ test(`should handle path with path parameter`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createRPC } from "./runtime.js";
+      import { RPC } from "./runtime.js";
     
       export type WithPathParameterRequest = {
         nameTest?: string;
@@ -91,7 +91,7 @@ test(`should handle path with path parameter`, async () => {
         bar?: number;
       }
       
-      export const WithPathParameterService_GetWithPathParameter = createRPC<WithPathParameterRequest, WithPathParameterResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
+      export const WithPathParameterService_GetWithPathParameter = new RPC<WithPathParameterRequest, WithPathParameterResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
       `
   );
 });
@@ -165,7 +165,7 @@ test(`should do proper linking when service reference other file`, async () => {
     outputFileService.content!,
     `
     import type { FlipMessage } from "./linking_resource_pb.js";
-    import { createRPC } from "./runtime.js";
+    import { RPC } from "./runtime.js";
       
     export type GetLinkiedRequest = {
       nameTest?: string;
@@ -175,7 +175,7 @@ test(`should do proper linking when service reference other file`, async () => {
       flip?: FlipMessage;
     }
     
-    export const LinkingService_GetLinkedResource = createRPC<GetLinkiedRequest, GetLinkedResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
+    export const LinkingService_GetLinkedResource = new RPC<GetLinkiedRequest, GetLinkedResponse>("GET", "/v1/{nameTest=projects/*/documents/*}:customMethod");
       `
   );
 });
@@ -220,7 +220,7 @@ test(`should support non GET methods`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createRPC } from "./runtime.js";
+      import { RPC } from "./runtime.js";
     
       export type CommonRequest = {
         nameTest?: string;
@@ -230,13 +230,13 @@ test(`should support non GET methods`, async () => {
         bar?: number;
       }
       
-      export const AllHttpMethodsService_DeleteMethod = createRPC<CommonRequest, Empty>("DELETE", "/v1/{nameTest=projects/*/documents/*}");
+      export const AllHttpMethodsService_DeleteMethod = new RPC<CommonRequest, Empty>("DELETE", "/v1/{nameTest=projects/*/documents/*}");
 
-      export const AllHttpMethodsService_PatchMethod = createRPC<CommonRequest, CommonResponse>("PATCH", "/v1/{nameTest=projects/*/documents/*}");
+      export const AllHttpMethodsService_PatchMethod = new RPC<CommonRequest, CommonResponse>("PATCH", "/v1/{nameTest=projects/*/documents/*}");
 
-      export const AllHttpMethodsService_PostMethod = createRPC<CommonRequest, CommonResponse>("POST", "/v1/{nameTest=projects/*/documents/*}");
+      export const AllHttpMethodsService_PostMethod = new RPC<CommonRequest, CommonResponse>("POST", "/v1/{nameTest=projects/*/documents/*}");
 
-      export const AllHttpMethodsService_PutMethod = createRPC<CommonRequest, CommonResponse>("PUT", "/v1/{nameTest=projects/*/documents/*}");
+      export const AllHttpMethodsService_PutMethod = new RPC<CommonRequest, CommonResponse>("PUT", "/v1/{nameTest=projects/*/documents/*}");
       `
   );
 });
@@ -283,7 +283,7 @@ test(`should convert FieldMask type to string`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { createRPC } from "./runtime.js";
+      import { RPC } from "./runtime.js";
 
       export type FlipMessage = {
         name?: string;
@@ -298,7 +298,7 @@ test(`should convert FieldMask type to string`, async () => {
         flip?: FlipMessage;
       }
       
-      export const FieldMaskService_UpdateMethod = createRPC<UpdateMethodRequest, UpdateMethodResponse>("PATCH", "/v1/{flip.name}", "flip");
+      export const FieldMaskService_UpdateMethod = new RPC<UpdateMethodRequest, UpdateMethodResponse>("PATCH", "/v1/{flip.name}", "flip");
       `
   );
 });

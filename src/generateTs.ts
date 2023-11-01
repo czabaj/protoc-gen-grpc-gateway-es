@@ -30,8 +30,8 @@ import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with {
 export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(getRuntimeFileContent());
-  const createRPC = file.export(`createRPC`);
-  return { createRPC };
+  const RPC = file.export(`RPC`);
+  return { RPC };
 };
 
 /**
@@ -175,8 +175,8 @@ function generateService(
         ? googleapisHttpMethodOption.body
         : undefined;
     f.print(makeJsDoc(method));
-    f.print`export const ${service.name}_${method.name} = ${
-      runtimeFile.createRPC
+    f.print`export const ${service.name}_${method.name} = new ${
+      runtimeFile.RPC
     }<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}"${
       bodyPath ? `, "${bodyPath}"` : ""
     });`;
