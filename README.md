@@ -30,18 +30,78 @@ class RPC<RequestMessage, ResponseMessage> = {
 };
 ```
 
-The intended use is
+## Usage
+
+The usage has two phases, first you need to generate the {Java,Type}Script files and then use them in your app.
+
+### Generate {Java,Type}Script files
+
+The package outputs an executable, which contains fixed version of `bun` runtime and all the needed source files. The executable is currently little overweight (~60MB), but it is a [known issue of `bun`](https://github.com/oven-sh/bun/issues/4453), hopefully they will fix this soon 🤞.
+
+The executable is standard `protoc` plugin so you can use it with any `protoc` based tool, but the `buf generate` is hightly recommended since it takes the burden of resolving proto dependencies from your shoulders. If you need some intro to `buf generate` there is a [tutorial on buf website](https://buf.build/docs/generate/tutorial).
+
+To run this plugin copy the executable to your codebase and configure the buf to use it in your `buf.yaml` file, for example
+
+```yaml
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: example/package/prefix
+    except:
+      - buf.build/googleapis/googleapis
+      - buf.build/grpc-ecosystem/grpc-gateway
+plugins:
+  - name: es
+    opt: target=ts
+    out: gen/es
+    path: ./path/to/protoc-gen-grpc-gateway-es
+```
+
+You need to change:
+
+- `managed.go_package_prefix.default` to your package prefix,
+- `plugins[0].out` to the output directory of your choice,
+- `plugins[0].path` to the path of the `protoc-gen-grpc-gateway-es` executable.
+
+Then run `buf generate` (assuming you have properly installed and configured the `buf`) and it will generate the TypeScript files for you.
+
+If you want to generate JavaScript instead, just pass change the plugin option `opt: target=js`.
+
+The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options).
+
+#### Note on formatting
+
+To simplify the development, this plugin is not concerned with pretty printed output. The generated files are readable, but if your eyes are bleeding, use your favorite formatter after the files generation, e.g.
+
+```sh
+npx prettier --write gen/es/
+```
+
+### Usage in apps code
+
+The generated files relies on some browser API, i.e. it is anticipated you will use it in the browser only, usage in Node.js is not tested, but in theory should work.
+
+The generated files contains all the the protobuf messages as TypeScript types, all the protobuf enums as TypeScript enums and protobuf methods are converted to `RPC` JavaScript classes. There is also a top-level `runtime.ts` file which contains the constructor of `RPC` class and a few helper TypeScript types and functions.
+
+The typical usage with `fetch` might look like this.
 
 ```TypeScript
-import { SomeService_SomeMethod } from "./gen/someService_pb.ts";
+import { SomeService_SomeMethod, type SomeMethodRequest } from "./gen/es/example/package/prefix/some_service_pb.ts";
+import { type RequestConfig } from "./gen/es/runtime.ts"
+
+const getBearerToken = () => {
+  // your getter for bearer token in you app
+  return `XYZ`;
+}
 
 const requestConfig: RequestConfig = {
-  basePath: "https://example.com/api/v1",
-  bearerToken: () => virtualGetBearerToken()
+  basePath: "https://example.test/api/v1",
+  bearerToken: getBearerToken
 };
 
-const variables: ServiceMethodRequest = {
-  flip: "flap",
+const someMethodRequest: SomeMethodRequest = {
+  flip: "flop",
 }
 
 // this is not required, but let's say we want to be able to abort the request
@@ -49,12 +109,50 @@ const abortController = new AbortController();
 
 const serviceMethodCall = fetch(SomeService_SomeMethod.getRequest(config)(variables), { signal: abortController.signal }).then(response => {
   if (response.ok) {
-    // type the response with the identity function, in non-TypeScript code, the `.then` chain with `responseTypeId` is redundant
+    // type the response with the `responseTypeId` identity function, only needed in TypeScript
     return response.json().then(SomeService_SomeMethod.responseTypeId)
   }
-  // reject the non-succesfull (non 2xx status code) response or do other things
+  // reject the non-succesfull (non 2xx status code) response or do other things in your app
   return Promise.reject(response)
 })
+```
+
+You should create a wrapper function around the `RPC` class since the logic will be probably the same for all RPCs. We don't provide this wrapper since it is app specific, but it might look something like this.
+
+```TypeScript
+import { SomeService_SomeMethod } from "./gen/es/example/package/prefix/some_service_pb.ts";
+import { type RPC, type RequestConfig } from "./gen/es/runtime.ts"
+
+// this is usually constant for all RPC's
+const requestConfig: RequestConfig = {
+  basePath: "https://example.test/api/v1",
+  bearerToken: getBearerToken
+};
+
+// The types generic types `RequestMessage` and `ResponseMessage` are inferred from the `RPC` passed as an argument
+const fetchWrapRPC = <RequestMessage, ResponseMessage>(
+  rpc: RPC<RequestMessage, ResponseMessage>
+) => {
+  return (
+    variables: RequestMessage,
+    { signal }: { signal?: AbortSignal } = {}
+  ) => {
+    return fetch(rpc.createRequest(requestConfig)(variables), {
+      signal,
+    }).then((response) => {
+      if (response.ok) {
+        return response.json().then(rpc.responseTypeId);
+      }
+      return Promise.reject(response);
+    });
+  };
+};
+
+// wrap our RPC imported from the generated file
+const someServiceSomeMethodAsyncFunction = fetchWrapRPC(SomeService_SomeMethod)
+
+const abortController = new AbortController();
+const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { signal: abortController.signal })
 ```
 
 ## Development
@@ -92,8 +190,14 @@ Folders and their meaning
 
 1. The `bun` is used also as a package manager, use [`bun add`](https://bun.sh/docs/cli/add) for adding dependencies, [`bun run`](https://bun.sh/docs/cli/run) for running NPM scripts or [`bunx`](https://bun.sh/docs/cli/bunx) instead of `npx`.
 1. Beware that `bun` and `buf` are two different things and easy to confuse, it is easy to make mistake like running `bun` command with `buf` and vice versa.
-1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use uniqie file name**. I usually name the file loosely after the test-case.
+1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use unique file name**. I usually name the file loosely after the test-case.
+1. The generated TypeScript files imports other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting and works OK in bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to match the file.
 
-## Usage and deployment
-
-TBD
+   ```json
+   // jest.config.json
+   {
+     "moduleNameMapper": {
+       "^(.+)\\.js$": "$1"
+     }
+   }
+   ```
