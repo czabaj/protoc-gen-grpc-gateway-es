@@ -302,3 +302,38 @@ test(`should convert FieldMask type to string`, async () => {
       `
   );
 });
+
+test(`should handle method w/o google.api.http option`, async () => {
+  const inputFileName = `service_without_http_option.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+      package test.example.v1;
+      
+      service WithoutHttpOptionService {
+        rpc TestMethod(SimpleMessage) returns (SimpleMessage);
+      };
+
+      message SimpleMessage {
+        string flip = 1;
+      }
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+      import { RPC } from "./runtime.js";
+
+      export type SimpleMessage = {
+        flip?: string;
+      }
+      
+      export const WithoutHttpOptionService_TestMethod = new RPC<SimpleMessage, SimpleMessage>("POST", "/test.example.v1.WithoutHttpOptionService/TestMethod");
+      `
+  );
+});

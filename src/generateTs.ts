@@ -152,28 +152,28 @@ function generateService(
   schema: Schema,
   f: GeneratedFile,
   service: DescService,
-  runtimeFile: RuntimeFile
+  runtimeFile: RuntimeFile,
+  filePackage?: string
 ) {
   for (const method of service.methods) {
     const googleapisHttpMethodOption = getGoogleapisHttpMethodOption(method);
-    if (!googleapisHttpMethodOption) {
-      throw new Error(
-        `Missing "option (google.api.http)" for service "${service.name}" and method "${method.name}"`
-      );
+    let httpMethod = "POST";
+    let path = `/${filePackage}.${service.name}/${method.name}`;
+    let bodyPath = undefined;
+    if (googleapisHttpMethodOption) {
+      if (googleapisHttpMethodOption.pattern.value) {
+        httpMethod = googleapisHttpMethodOption.pattern.case.toUpperCase();
+        path = pathParametersToLocal(
+          googleapisHttpMethodOption.pattern.value as string
+        );
+      }
+      if (
+        googleapisHttpMethodOption.body &&
+        googleapisHttpMethodOption.body !== "*"
+      ) {
+        bodyPath = googleapisHttpMethodOption.body;
+      }
     }
-    if (!googleapisHttpMethodOption.pattern.value) {
-      throw new Error(
-        `Missing URL in "option (google.api.http)" for service "${service.name}" and method "${method.name}"`
-      );
-    }
-    const httpMethod = googleapisHttpMethodOption.pattern.case.toUpperCase();
-    const path = pathParametersToLocal(
-      googleapisHttpMethodOption.pattern.value as string
-    );
-    const bodyPath =
-      googleapisHttpMethodOption.body && googleapisHttpMethodOption.body !== "*"
-        ? googleapisHttpMethodOption.body
-        : undefined;
     f.print(makeJsDoc(method));
     f.print`export const ${service.name}_${method.name} = new ${
       runtimeFile.RPC
@@ -195,7 +195,7 @@ export function generateTs(schema: Schema) {
       generateMessage(schema, f, message);
     }
     for (const service of file.services) {
-      generateService(schema, f, service, runtimeFile);
+      generateService(schema, f, service, runtimeFile, file.proto.package);
     }
   }
 }
