@@ -4,48 +4,43 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 
 ## Philosophy
 
-The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to object. The RPC objects are named as `ServiceName_MethodName` and have following signature
+The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to object. The RPC objects are exported as `ServiceName_MethodName` and have following signature
 
 ```TypeScript
-import type { RequestConfig, RPC } from "./runtime.ts";
-
-export type ServiceMethodRequest = {
-  foo?: string;
-}
-
-export type ServiceMethodResponse = {
-  bar?: string;
-}
-
-export const Service_Method: {
-  createRequest: (config: RequestConfig) => (params: ServiceMethodRequest) => Request;
-  responseTypeId: (a: any): ServiceMethodResponse
-} = ...
+export type RPC<RequestMessage, ResponseMessage> = {
+  createRequest: (
+    config: RequestConfig
+  ) => (variables: RequestMessage) => Request;
+  responseTypeId: (response: any) => ResponseMessage;
+};
 ```
 
 The RPC object contains two properties
 
-- `createRequest` function which accepts `RequestConfig` with base path and bearer token and returns another function, which requires input parameter and return a [Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) that can be used directly with browser fetch API,
-- `responseTypeId` function which is an identity function[^1] that just assigns the type of the response. This function is not needed in plain JavaScript, it only provides type information for TypeScript.
+- `createRequest` function which accepts `RequestConfig` with base path and bearer token and returns another function, which requires input parameter and return a [JavaScript Request object](https://developer.mozilla.org/en-US/docs/Web/API/Request) that can be used directly with browser fetch API,
+- `responseTypeId` function which is an identity function[^1] that just assigns the type of the response. This function is not needed in plain JavaScript, it just provides type information for TypeScript.
 
 [^1]: Function which returns the argument `a => a`, i.e. does nothing
 
 The intended use is
 
 ```TypeScript
-const config: RequestConfig = {
+const requestConfig: RequestConfig = {
   basePath: "https://example.com/api/v1",
   bearerToken: () => virtualGetBearerToken()
 };
 
 const variables: ServiceMethodRequest = {
-  foo: "hello",
+  flip: "flap",
 }
 
-const serviceMethodCall = fetch(Service_Method.getRequest(config)(variables)).then(response => {
+// this is not required, but let's say we want to be able to abort the request
+const abortController = new AbortController();
+
+const serviceMethodCall = fetch(rpc.getRequest(config)(variables), { signal: abortController.signal }).then(response => {
   if (response.ok) {
     // type the response with the identity function, in non-TypeScript code, the `.then` chain with `responseTypeId` is redundant
-    return response.json().then(Service_Method.responseTypeId)
+    return response.json().then(rpc.responseTypeId)
   }
   // reject the non-succesfull (non 2xx status code) response or do other things
   return Promise.reject(response)
@@ -68,7 +63,7 @@ Folders and their meaning
   option (google.api.http) = {get: "/v1/{name_test=projects/*/documents/*}:customMethod"};
   ```
 
-  where the value of the `google.api.http` is an object, the protobuf-es framework requires you to have prepared the object types as `@bufbuild/protobuf/Message` JavaScript classes. We are using `buf` to convert all options commonly used in gRPC-gateway into the required messages classes. There is a script `bun run generateOptions` which outputs the JavaScript classes into the `/options/` folder, from where we import what we need during code generation.
+  where the value of the `google.api.http` is an object, the protobuf-es framework requires you to have prepared the object types as `@bufbuild/protobuf/Message` JavaScript classes. Jere we are using `buf` to convert all options commonly used in gRPC-gateway into the required messages classes. There is a script `bun run generateOptions` which outputs the JavaScript classes into the `/options/` folder, from which we import the classes during generation.
 
 - `/src/` - the main source code of this plugin
 
