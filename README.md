@@ -155,6 +155,51 @@ const abortController = new AbortController();
 const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { signal: abortController.signal })
 ```
 
+#### Usage caveats
+
+1. The generated TypeScript files imports other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting which works OK in the bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to match the file.
+
+   ```json
+   // jest.config.json
+   {
+     "moduleNameMapper": {
+       "^(.+)\\.js$": "$1"
+     }
+   }
+   ```
+
+1. The protobuf `oneof` are generated into the TypeScript as union, i.e. the message
+
+   ```protobuf
+   message Flip {
+     string flap = 1;
+     oneof toss {
+       bool heads = 2;
+       bool tails = 3;
+     }
+   }
+   ```
+
+   is generated as
+
+   ```TypeScript
+   export type Flip = { flap?: string } & (
+    | { heads?: boolean; }
+    | { tails?: boolean; }
+   );
+   ```
+
+   this captures the mutual exclusivity but is a little cumbersome to work with in TypeScript, because if you attempt to access `flip.heads` the compiler complaints that `heads` might not be defined. This forces you to use [the JavaScript `in` operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/in) which acts as a type guard. It is little inconvenient to use it each time you want to access the `oneof` field, but it is the proper way to tackle this problem.
+
+   ```TypeScript
+   let test = flip.heads; // ❌ TS error: Object is possibly 'undefined'.
+   if ("heads" in flip) {
+     test = flip.heads; // ✅ OK, the `heads` is the `oneof` field
+     test = flip.tails; // ❌ TS error: the `heads` and `tails` are mutually exclusive
+   }
+
+   ```
+
 ## Development
 
 First, read the [Protobuf-ES: Writing Plugins](https://github.com/bufbuild/protobuf-es/blob/main/docs/writing_plugins.md#protobuf-es-writing-plugins) and familiarize yourself with the [Bun toolkit](https://bun.sh/docs).
@@ -186,18 +231,8 @@ Folders and their meaning
 
 [^2]: the `protoc` feeds the plugin with gRPC message `CodeGenerationRequest` on stdin and awaits the gRPC `CodeGeneraionResponse` on stdout.
 
-### Caveats
+### Development caveats
 
 1. The `bun` is used also as a package manager, use [`bun add`](https://bun.sh/docs/cli/add) for adding dependencies, [`bun run`](https://bun.sh/docs/cli/run) for running NPM scripts or [`bunx`](https://bun.sh/docs/cli/bunx) instead of `npx`.
 1. Beware that `bun` and `buf` are two different things and easy to confuse, it is easy to make mistake like running `bun` command with `buf` and vice versa.
 1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use unique file name**. I usually name the file loosely after the test-case.
-1. The generated TypeScript files imports other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting and works OK in bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to match the file.
-
-   ```json
-   // jest.config.json
-   {
-     "moduleNameMapper": {
-       "^(.+)\\.js$": "$1"
-     }
-   }
-   ```
