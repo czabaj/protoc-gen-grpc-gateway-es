@@ -104,10 +104,12 @@ const someMethodRequest: SomeMethodRequest = {
   flip: "flop",
 }
 
-// this is not required, but let's say we want to be able to abort the request
-const abortController = new AbortController();
+// this is not required, but let's say we want to abort the request after 5 seconds
+const signal = AbortSignal.timeout(5_000);
 
-const serviceMethodCall = fetch(SomeService_SomeMethod.getRequest(config)(variables), { signal: abortController.signal }).then(response => {
+const request = SomeService_SomeMethod.getRequest(config, variables)
+
+const serviceMethodCall = fetch(request, { signal }).then(response => {
   if (response.ok) {
     // type the response with the `responseTypeId` identity function, only needed in TypeScript
     return response.json().then(SomeService_SomeMethod.responseTypeId)
@@ -117,19 +119,19 @@ const serviceMethodCall = fetch(SomeService_SomeMethod.getRequest(config)(variab
 })
 ```
 
-You should create a wrapper function around the `RPC` class since the logic will be probably the same for all RPCs. We don't provide this wrapper since it is app specific, but it might look something like this.
+You will likely create a wrapper function around the `RPC` class since the logic will be probably the same for all RPCs. We don't provide this wrapper since it is app specific, but it might look something like this.
 
 ```TypeScript
 import { SomeService_SomeMethod } from "./gen/es/example/package/prefix/some_service_pb.ts";
 import { type RPC, type RequestConfig } from "./gen/es/runtime.ts"
 
-// this is usually constant for all RPC's
+// this is usually constant for all RPC's in one API
 const requestConfig: RequestConfig = {
   basePath: "https://example.test/api/v1",
   bearerToken: getBearerToken
 };
 
-// The types generic types `RequestMessage` and `ResponseMessage` are inferred from the `RPC` passed as an argument
+// The generic types `RequestMessage` and `ResponseMessage` are inferred from the `RPC` passed as an argument
 const fetchWrapRPC = <RequestMessage, ResponseMessage>(
   rpc: RPC<RequestMessage, ResponseMessage>
 ) => {
@@ -137,30 +139,35 @@ const fetchWrapRPC = <RequestMessage, ResponseMessage>(
     variables: RequestMessage,
     { signal }: { signal?: AbortSignal } = {}
   ) => {
-    return fetch(rpc.createRequest(requestConfig)(variables), {
-      signal,
-    }).then((response) => {
-      if (response.ok) {
-        return response.json().then(rpc.responseTypeId);
-      }
-      return Promise.reject(response);
-    });
+    return fetch(rpc.createRequest(requestConfig, variables), { signal })
+      .then((response) => {
+        if (response.ok) {
+          return response.json().then(rpc.responseTypeId);
+        }
+        return Promise.reject(response);
+      });
   };
 };
 
-// wrap our RPC imported from the generated file
-const someServiceSomeMethodAsyncFunction = fetchWrapRPC(SomeService_SomeMethod)
+// use the wrapper for generated RPC
+const someServiceSomeMethodAsyncFunction = fetchWrapRPC(SomeService_SomeMethod);
 
+// example of AbortController that you can abort imperetively later
 const abortController = new AbortController();
-const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { signal: abortController.signal })
+// call the async function which accepts the request message and returns a promise of response JSON
+const responseJSON = await someServiceSomeMethodAsyncFunction(
+  { flip: "flop" }, 
+  { signal: abortController.signal }
+);
 ```
 
 #### Usage caveats
 
-1. The generated TypeScript files imports other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting which works OK in the bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to match the file.
+1. The generated TypeScript files imports other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting which works OK in the bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to find the file.
 
    ```json
    // jest.config.json
+
    {
      "moduleNameMapper": {
        "^(.+)\\.js$": "$1"
@@ -171,6 +178,8 @@ const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { si
 1. The protobuf `oneof` are generated into the TypeScript as union, i.e. the message
 
    ```protobuf
+   // flip.proto
+
    message Flip {
      string flap = 1;
      oneof toss {
@@ -183,13 +192,15 @@ const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { si
    is generated as
 
    ```TypeScript
+   // flip_pb.ts
+   
    export type Flip = { flap?: string } & (
     | { heads?: boolean; }
     | { tails?: boolean; }
    );
    ```
 
-   this captures the mutual exclusivity but is a little cumbersome to work with in TypeScript, because if you attempt to access `flip.heads` the compiler complaints that `heads` might not be defined. This forces you to use [the JavaScript `in` operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/in) which acts as a type guard. It is little inconvenient to use it each time you want to access the `oneof` field, but it is the proper way to tackle this problem.
+   this captures the mutual exclusivity but is a little cumbersome to work with in TypeScript, because if you attempt to access `flip.heads` the compiler complains that `heads` might not be defined. This forces you to use [the JavaScript `in` operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/in) which acts as a type guard. It is little inconvenient to use it each time you want to access the `oneof` field, but it is the proper way to tackle this problem.
 
    ```TypeScript
    let test = flip.heads; // ❌ TS error: Object is possibly 'undefined'.
@@ -199,6 +210,29 @@ const response = await someServiceSomeMethodAsyncFunction({ flip: "flop" }, { si
    }
 
    ```
+
+1. We decided to generate the [JavaScript `Request` object](https://developer.mozilla.org/en-US/docs/Web/API/Request) for you, which is neatly compatible with the fetch API. Unfortunately, the `Request` object has a few quirks inherited from the streaming nature of the fetch. If you would ever need to read the `body` of the `Request`, you'll find it is a [`ReadableStream` object](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) and as such it is uneasy to obtain it's value. The most straight-forward way to consume the stream is to pass it to the `Response` object and then read it asynchronously
+
+   ```TypeScript
+   const request = SomeService_SomeMethod.getRequest(config, variables);
+   const requestBodyAsText = await(new Response(request.body).text());
+   ```
+
+   you can as well parse the body to a string with `Response#json` you know from the fetch API responses. After this call the readable stream will be consumed and no longer available, so if you read the `body` of the `Request` you can no longer use the `Request` object for the fetch API call 😒 You need to create a new `Request` object, where the constructor allows you clone the original request and you can pass in the old body you have read as a new body.
+
+   ```TypeScript
+   // here passing the original request and the old body which was read into a text.
+   const requestClone = new Request(request, { body: requestBodyAsText });
+   ```
+
+   The fetch API has identical signature so you can pass the same parameters to `fetch`
+
+   ```TypeScript
+   // instead of creating a new Request object, you can pass the arguments directly to fetch call
+   const response = await fetch(request, { body: requestBodyAsText });
+   ```
+
+   But you will most likely read the `Request` to use other network library than `fetch`. In any case, the `runtime.ts` library exports all of it's internals so you can use it as a plumbing in case you don't like the `RPC#createRequest` method 😉.
 
 ## Development
 

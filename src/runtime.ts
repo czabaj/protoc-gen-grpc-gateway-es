@@ -108,57 +108,55 @@ export class RPC<RequestMessage, ResponseMessage> {
    * @param config the request configuration for the RPC
    * @param params the request message for the RPC as defined in the proto file
    */
-  createRequest(config: RequestConfig): (params: RequestMessage) => Request {
-    return (params) => {
-      let paramsClone = params && { ...params };
-      const pathWithParams = replacePathParameters(this.path, paramsClone);
-      // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
-      // part of the base path will be used :/
-      const url = config.basePath
-        ? new URL(
-            removeLeadingSlash(pathWithParams),
-            addTrailingSlash(config.basePath)
-          )
-        : new URL(pathWithParams, window.location.href);
+  createRequest(config: RequestConfig, params: RequestMessage): Request {
+    let paramsClone = params && { ...params };
+    const pathWithParams = replacePathParameters(this.path, paramsClone);
+    // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
+    // part of the base path will be used :/
+    const url = config.basePath
+      ? new URL(
+          removeLeadingSlash(pathWithParams),
+          addTrailingSlash(config.basePath)
+        )
+      : new URL(pathWithParams, window.location.href);
 
-      let body: string | undefined = undefined;
-      if (params && this.method !== `GET`) {
-        if (this.bodyKey) {
-          body = JSON.stringify(get(params, this.bodyKey));
-          unset(paramsClone!, this.bodyKey);
-        } else {
-          body = JSON.stringify(params);
-          paramsClone = undefined as any;
+    let body: string | undefined = undefined;
+    if (params && this.method !== `GET`) {
+      if (this.bodyKey) {
+        body = JSON.stringify(get(params, this.bodyKey));
+        unset(paramsClone!, this.bodyKey);
+      } else {
+        body = JSON.stringify(params);
+        paramsClone = undefined as any;
+      }
+    }
+
+    if (paramsClone) {
+      for (const [k, v] of Object.entries(paramsClone)) {
+        if (isScalarType(v)) {
+          url.searchParams.set(k, String(v));
         }
       }
+    }
 
-      if (paramsClone) {
-        for (const [k, v] of Object.entries(paramsClone)) {
-          if (isScalarType(v)) {
-            url.searchParams.set(k, String(v));
-          }
-        }
-      }
+    const headers = new Headers();
+    if (body) {
+      headers.set("Content-Type", "application/json; charset=utf-8");
+    }
+    const bearerToken =
+      typeof config.bearerToken === "function"
+        ? config.bearerToken()
+        : config.bearerToken;
+    if (bearerToken) {
+      headers.set("Authorization", `Bearer ${bearerToken}`);
+    }
 
-      const headers = new Headers();
-      if (body) {
-        headers.set("Content-Type", "application/json");
-      }
-      const bearerToken =
-        typeof config.bearerToken === "function"
-          ? config.bearerToken()
-          : config.bearerToken;
-      if (bearerToken) {
-        headers.set("Authorization", `Bearer ${bearerToken}`);
-      }
-
-      const request = new Request(url.href, {
-        body,
-        method: this.method,
-        headers,
-      });
-      return request;
-    };
+    const request = new Request(url.href, {
+      body,
+      method: this.method,
+      headers,
+    });
+    return request;
   }
 
   /**

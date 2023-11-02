@@ -19,9 +19,10 @@ test(`should handle nested path parameters`, () => {
     message_id: "XYZ",
   };
   const rpc = new RPC(`POST`, path);
-  const request = rpc.createRequest({ basePath: `https://example.test` })(
-    parameters
-  );
+  const config = {
+    basePath: `https://example.test`,
+  };
+  const request = rpc.createRequest(config, parameters);
   expect(request.url).toBe(`https://example.test/v1/flup/XYZ`);
 });
 
@@ -32,9 +33,8 @@ test(`should properly distribute path parameters`, async () => {
     updateMask: `flop.flup`,
   };
   const rpc = new RPC(`PATCH`, path, "flip");
-  const request = rpc.createRequest({ basePath: `https://example.test` })(
-    parameters
-  );
+  const config = { basePath: `https://example.test` };
+  const request = rpc.createRequest(config, parameters);
   // the `flip.name` should be in the path, the `updateMask` should be in the queryString
   expect(request.url).toBe(`https://example.test/v1/flap?updateMask=flop.flup`);
   const bodyContent = await new Response(request.body).text();
@@ -45,28 +45,31 @@ test(`should properly distribute path parameters`, async () => {
 test(`should set Bearer token if provided as a string in config`, () => {
   const path = `/v1/flip`;
   const rpc = new RPC(`GET`, path);
-  const request = rpc.createRequest({
+  const config = {
     basePath: `https://example.test`,
     bearerToken: `secret`,
-  })(undefined);
+  };
+  const request = rpc.createRequest(config, undefined);
   expect(request.headers.get("Authorization")).toBe(`Bearer secret`);
 });
 
 test(`should set Bearer token if provided as a function`, () => {
   const path = `/v1/flip`;
   const rpc = new RPC(`GET`, path);
-  const request = rpc.createRequest({
+  const config = {
     basePath: `https://example.test`,
     bearerToken: () => `psst!`,
-  })(undefined);
+  };
+  const request = rpc.createRequest(config, undefined);
   expect(request.headers.get("Authorization")).toBe(`Bearer psst!`);
 });
 
 test(`should prepend full URL basePath`, () => {
   const path = `/v1/flip`;
   const rpc = new RPC(`GET`, path);
-  const request = rpc.createRequest({
+  const config = {
     basePath: `https://example.test/api`,
-  })(undefined);
+  };
+  const request = rpc.createRequest(config, undefined);
   expect(request.url).toBe(`https://example.test/api/v1/flip`);
 });
