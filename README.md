@@ -21,7 +21,7 @@ class RPC<RequestMessage, ResponseMessage> = {
    * @param config the request configuration for the RPC
    * @param params the request message for the RPC as defined in the proto file
    */
-  createRequest: (c: RequestConfig) => (p: RequestMessage) => Request;
+  createRequest: (c: RequestConfig, m: RequestMessage) => Request;
   /**
    * Simple identity function that just types the input as ResponseMessage.
    * Usefull for TypeScript code to assing a type to the response.
@@ -156,7 +156,7 @@ const someServiceSomeMethodAsyncFunction = fetchWrapRPC(SomeService_SomeMethod);
 const abortController = new AbortController();
 // call the async function which accepts the request message and returns a promise of response JSON
 const responseJSON = await someServiceSomeMethodAsyncFunction(
-  { flip: "flop" }, 
+  { flip: "flop" },
   { signal: abortController.signal }
 );
 ```
@@ -193,7 +193,7 @@ const responseJSON = await someServiceSomeMethodAsyncFunction(
 
    ```TypeScript
    // flip_pb.ts
-   
+
    export type Flip = { flap?: string } & (
     | { heads?: boolean; }
     | { tails?: boolean; }
