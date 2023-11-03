@@ -1,3 +1,46 @@
+// lookup table from base64 character to byte
+const encTable =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split("");
+
+/**
+ * Converts Uint8Array to base64 encoded string. Thanks @timostamm !
+ * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L42
+ */
+export const base64Encode = (bytes: Uint8Array): string => {
+  const base64 = [];
+  let groupPos = 0, // position in base64 group
+    p = 0; // carry over from previous byte
+
+  for (const b of bytes) {
+    switch (groupPos) {
+      case 0:
+        base64.push(encTable[b >> 2]);
+        p = (b & 3) << 4;
+        groupPos = 1;
+        break;
+      case 1:
+        base64.push(encTable[p | (b >> 4)]);
+        p = (b & 15) << 2;
+        groupPos = 2;
+        break;
+      case 2:
+        base64.push(encTable[p | (b >> 6)]);
+        base64.push(encTable[b & 63]);
+        groupPos = 0;
+        break;
+    }
+  }
+
+  // add output padding
+  if (groupPos) {
+    base64.push(encTable[p]);
+    base64.push("=");
+    if (groupPos == 1) base64.push("=");
+  }
+
+  return base64.join("");
+};
+
 /**
  * Retrieves property from an object with path specified by dot notation.
  */
@@ -72,6 +115,17 @@ export const replacePathParameters = <RequestMessage>(
   });
 };
 
+/**
+ * A replacer for binary data in JSON.stringify. Thanks @Unix4ever for the idea!
+ * @see https://github.com/grpc-ecosystem/protoc-gen-grpc-gateway-ts/blob/36143bb34a4710d2da3b1aefdcd6cd9aa29b30b0/generator/template.go#L206
+ */
+export const jsonStringifyReplacer = (_k: string, v: any): any => {
+  if (v && v instanceof Uint8Array) {
+    return base64Encode(v);
+  }
+  return v;
+};
+
 export type RequestConfig = {
   basePath?: string;
   bearerToken?: string | (() => string);
@@ -118,15 +172,15 @@ export class RPC<RequestMessage, ResponseMessage> {
           removeLeadingSlash(pathWithParams),
           addTrailingSlash(config.basePath)
         )
-      : new URL(pathWithParams, window.location.href);
+      : new URL(pathWithParams, globalThis.location.href);
 
     let body: string | undefined = undefined;
     if (params && this.method !== `GET`) {
       if (this.bodyKey) {
-        body = JSON.stringify(get(params, this.bodyKey));
+        body = JSON.stringify(get(params, this.bodyKey), jsonStringifyReplacer);
         unset(paramsClone!, this.bodyKey);
       } else {
-        body = JSON.stringify(params);
+        body = JSON.stringify(params, jsonStringifyReplacer);
         paramsClone = undefined as any;
       }
     }
