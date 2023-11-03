@@ -194,3 +194,27 @@ export type MessageRepeatedWKT = {
 }`
   );
 });
+
+test(`should convert int64 to string type`, async () => {
+  const inputFileName = `int64_message.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+message BigIntMessage {
+  int64 size_in_storage = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+import type { BigIntString } from "./runtime.js";
+
+export type BigIntMessage = {
+  sizeInStorage?: BigIntString;
+}`
+  );
+});

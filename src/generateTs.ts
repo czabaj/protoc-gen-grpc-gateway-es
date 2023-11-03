@@ -31,7 +31,8 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(getRuntimeFileContent());
   const RPC = file.export(`RPC`);
-  return { RPC };
+  const BigIntString = file.export(`BigIntString`).toTypeOnly();
+  return { BigIntString, RPC };
 };
 
 /**
@@ -55,12 +56,13 @@ function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
 function generateType(
   typing: Printable,
   required: boolean,
-  fieldBehavior: GoogleapisFieldBehavior | undefined
+  fieldBehavior: GoogleapisFieldBehavior | undefined,
+  runtimeFile: RuntimeFile
 ): { type: Printable; nullable?: boolean } {
   if (Array.isArray(typing)) {
     // in case of an array, there is _usually_ the type in first position and there can be an array `[]` notation at the
     // second position, so we are just intereseted in the first position. Let's see how far this will get us.
-    const resolved = generateType(typing[0], required, fieldBehavior);
+    const resolved = generateType(typing[0], required, fieldBehavior, runtimeFile);
     return {
       type: [resolved.type, ...typing.slice(1)],
       nullable: resolved.nullable,
@@ -81,6 +83,9 @@ function generateType(
         };
     }
   }
+  if (typing === `bigint`) {
+    return { type: runtimeFile.BigIntString };
+  }
   return { type: typing };
 }
 
@@ -88,7 +93,8 @@ function generateField(
   schema: Schema,
   f: GeneratedFile,
   field: DescField,
-  openApiV2Required?: string[]
+  openApiV2Required?: string[],
+  runtimeFile: RuntimeFile
 ) {
   f.print(makeJsDoc(field));
   const { typing } = getFieldTyping(field, f);
@@ -99,7 +105,8 @@ function generateField(
   const { type, nullable } = generateType(
     typing,
     required,
-    googleapisFieldBehaviorOption
+    googleapisFieldBehaviorOption,
+    runtimeFile
   );
   f.print`${localName(field)}${required ? "" : "?"}: ${type}${
     !nullable ? "" : " | null"
@@ -109,10 +116,12 @@ function generateField(
 function generateMessage(
   schema: Schema,
   f: GeneratedFile,
-  message: DescMessage
+  message: DescMessage,
+  runtimeFile: RuntimeFile
 ) {
   const oneOfs: DescOneof[] = [];
   const openApiV2Schema = getOpenapiMessageOption(message);
+  const requiredFields = openApiV2Schema?.jsonSchema?.required;
   f.print(makeJsDoc(message));
   f.print`export type ${message} = {`;
   for (const member of message.members) {
@@ -121,7 +130,7 @@ function generateMessage(
         oneOfs.push(member);
         break;
       default:
-        generateField(schema, f, member, openApiV2Schema?.jsonSchema?.required);
+        generateField(schema, f, member, requiredFields, runtimeFile);
         break;
     }
   }
@@ -133,7 +142,7 @@ function generateMessage(
         let field = oneOf.fields[i];
         if (i > 0) f.print` | `;
         f.print`{ `;
-        generateField(schema, f, field);
+        generateField(schema, f, field, requiredFields, runtimeFile);
         f.print` }`;
       }
       f.print`)`;
@@ -144,7 +153,7 @@ function generateMessage(
     generateEnum(schema, f, nestedEnum);
   }
   for (const nestedMessage of message.nestedMessages) {
-    generateMessage(schema, f, nestedMessage);
+    generateMessage(schema, f, nestedMessage, runtimeFile);
   }
 }
 
@@ -192,7 +201,7 @@ export function generateTs(schema: Schema) {
       generateEnum(schema, f, enumeration);
     }
     for (const message of file.messages) {
-      generateMessage(schema, f, message);
+      generateMessage(schema, f, message, runtimeFile);
     }
     for (const service of file.services) {
       generateService(schema, f, service, runtimeFile, file.proto.package);

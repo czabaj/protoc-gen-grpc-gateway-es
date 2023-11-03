@@ -1,3 +1,32 @@
+declare const __big__int: unique symbol;
+
+/**
+ * A string containing potentially large integer, which cannot be safely coerced to JavaScript number.
+ * Use the provided conversion functions to convert the type to regular JavaScript types.
+ */
+export type BigIntString = string & { [__big__int]: never };
+
+/**
+ * Converts the BigIntString into a regular JavaScript bigint.
+ */
+export const bigIntStringToBigInt: (value: BigIntString) => bigint = BigInt;
+/**
+ * Converts the BigIntString into a regular JavaScript number.
+ * Potentialy dangerous, use `Number.isSafeInteger()` after conversion.
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isSafeInteger
+ */
+export const bigIntStringToNumber: (value: BigIntString) => number = Number;
+/**
+ * Converts the BigIntString into a regular JavaScript string.
+ */
+export const bigIntStringToString: (value: BigIntString) => string = String;
+/**
+ * Converts a JavaScript values to BigIntString type.
+ */
+export const asBigIntString: (
+  value: BigIntString | bigint | number
+) => BigIntString = String as any;
+
 // lookup table from base64 character to byte
 const encTable =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split("");
