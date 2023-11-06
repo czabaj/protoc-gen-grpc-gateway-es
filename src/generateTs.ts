@@ -32,7 +32,8 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   file.print(getRuntimeFileContent());
   const RPC = file.export(`RPC`);
   const BigIntString = file.export(`BigIntString`).toTypeOnly();
-  return { BigIntString, RPC };
+  const BytesString = file.export(`BytesString`).toTypeOnly();
+  return { BigIntString, BytesString, RPC };
 };
 
 /**
@@ -62,7 +63,12 @@ function generateType(
   if (Array.isArray(typing)) {
     // in case of an array, there is _usually_ the type in first position and there can be an array `[]` notation at the
     // second position, so we are just intereseted in the first position. Let's see how far this will get us.
-    const resolved = generateType(typing[0], required, fieldBehavior, runtimeFile);
+    const resolved = generateType(
+      typing[0],
+      required,
+      fieldBehavior,
+      runtimeFile
+    );
     return {
       type: [resolved.type, ...typing.slice(1)],
       nullable: resolved.nullable,
@@ -83,10 +89,14 @@ function generateType(
         };
     }
   }
-  if (typing === `bigint`) {
-    return { type: runtimeFile.BigIntString };
+  switch (typing) {
+    case `bigint`:
+      return { type: runtimeFile.BigIntString };
+    case `Uint8Array`:
+      return { type: runtimeFile.BytesString };
+    default:
+      return { type: typing };
   }
-  return { type: typing };
 }
 
 function generateField(

@@ -195,7 +195,7 @@ export type MessageRepeatedWKT = {
   );
 });
 
-test(`should convert int64 to string type`, async () => {
+test(`should convert int64 to BigIntString type`, async () => {
   const inputFileName = `int64_message.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
@@ -215,6 +215,30 @@ import type { BigIntString } from "./runtime.js";
 
 export type BigIntMessage = {
   sizeInStorage?: BigIntString;
+}`
+  );
+});
+
+test(`should convert bytes to BytesString type`, async () => {
+  const inputFileName = `bytes_message.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+message BytesMessage {
+  bytes content = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+import type { BytesString } from "./runtime.js";
+
+export type BytesMessage = {
+  content?: BytesString;
 }`
   );
 });

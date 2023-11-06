@@ -4,7 +4,7 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 
 ## Philosophy
 
-The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to RPC JavaScript classes. The RPC classes are exported as `ServiceName_MethodName` and have following signature
+The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to RPC JavaScript classes. The RPCs are exported as `ServiceName_MethodName` and have following signature
 
 ```TypeScript
 class RPC<RequestMessage, ResponseMessage> = {
@@ -29,6 +29,12 @@ class RPC<RequestMessage, ResponseMessage> = {
   responseTypeId: (r: any) => ResponseMessage;
 };
 ```
+
+Unlike many other gRPC-to-TypeScript generators, this one tries to be as minimal as possible, we don't do any extra data de/-serialization for you, but we are using the TypeScript type system to provide more safety and the `runtime.ts` file generated alongside your files contains a few conversion helpers.
+
+- The well-known protobuf types ` google.protobuf.Timestamp` an `google.protobuf.Duration` are typed as a `string`. You can pass the `Timestamp` string to JS `Date`. The `Duration` is a float with `s` suffix for _seconds_, there is no appropriate JS type for that.
+- The protobuf `bytes` type is converted to `BytesString` type, which is a type alias for a `string` with type-only symbol, that prevents you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `UInt8Array`.
+- The protobuf `int64` type is converted to `BigIntString` type, which is a type alias for a `string` with type-only symbol, that prevents you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `BigInt`.
 
 ## Usage
 

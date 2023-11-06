@@ -1,10 +1,10 @@
-declare const __big__int: unique symbol;
+declare const __type__: unique symbol;
 
 /**
- * A string containing potentially large integer, which cannot be safely coerced to JavaScript number.
+ * String containing potentially large integer, which cannot be safely coerced to JavaScript number.
  * Use the provided conversion functions to convert the type to regular JavaScript types.
  */
-export type BigIntString = string & { [__big__int]: never };
+export type BigIntString = string & { [__type__]: `BigIntString` };
 
 /**
  * Converts the BigIntString into a regular JavaScript bigint.
@@ -27,15 +27,30 @@ export const asBigIntString: (
   value: BigIntString | bigint | number
 ) => BigIntString = String as any;
 
+/**
+ * String containing binary data encoded as base64, used for protobuf bytes fields.
+ * Use the provided conversion functions to convert the type from/to Uint8Array.
+ */
+export type BytesString = string & { [__type__]: `BytesString` };
+
 // lookup table from base64 character to byte
 const encTable =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split("");
 
+// lookup table from base64 character *code* to byte because lookup by number is fast
+const decTable: Record<number, number> = {};
+for (let i = 0; i < encTable.length; i++) {
+  decTable[encTable[i].charCodeAt(0)] = i;
+}
+// support base64url variants
+decTable["-".charCodeAt(0)] = encTable.indexOf("+");
+decTable["_".charCodeAt(0)] = encTable.indexOf("/");
+
 /**
- * Converts Uint8Array to base64 encoded string. Thanks @timostamm !
+ * Converts Uint8Array to BytesString. Thanks @timostamm !
  * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L42
  */
-export const base64Encode = (bytes: Uint8Array): string => {
+export const asBytesString = (bytes: Uint8Array): BytesString => {
   const base64 = [];
   let groupPos = 0, // position in base64 group
     p = 0; // carry over from previous byte
@@ -67,7 +82,62 @@ export const base64Encode = (bytes: Uint8Array): string => {
     if (groupPos == 1) base64.push("=");
   }
 
-  return base64.join("");
+  return base64.join(``) as BytesString;
+};
+
+/**
+ * Converts BytesString to Uint8Array. Thanks @timostamm !
+ * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L97
+ */
+export const bytesStringToUint8Array = (base64Str: BytesString): Uint8Array => {
+  // estimate byte size, not accounting for inner padding and whitespace
+  let es = (base64Str.length * 3) / 4;
+  if (base64Str.endsWith(`==`)) es -= 2;
+  else if (base64Str.endsWith(`=`)) es -= 1;
+
+  const bytes = new Uint8Array(es);
+  let bytePos = 0, // position in byte array
+    groupPos = 0, // position in base64 group
+    b, // current byte
+    p = 0; // previous byte
+  for (let i = 0, l = base64Str.length; i < l; i++) {
+    b = decTable[base64Str.charCodeAt(i)];
+    if (b === undefined) {
+      switch (base64Str[i]) {
+        case "=":
+          groupPos = 0; // reset state when padding found
+        case "\n":
+        case "\r":
+        case "\t":
+        case " ":
+          continue; // skip white-space, and padding
+        default:
+          throw Error("invalid base64 string.");
+      }
+    }
+    switch (groupPos) {
+      case 0:
+        p = b;
+        groupPos = 1;
+        break;
+      case 1:
+        bytes[bytePos++] = (p << 2) | ((b & 48) >> 4);
+        p = b;
+        groupPos = 2;
+        break;
+      case 2:
+        bytes[bytePos++] = ((p & 15) << 4) | ((b & 60) >> 2);
+        p = b;
+        groupPos = 3;
+        break;
+      case 3:
+        bytes[bytePos++] = ((p & 3) << 6) | b;
+        groupPos = 0;
+        break;
+    }
+  }
+  if (groupPos == 1) throw Error("invalid base64 string.");
+  return bytes.subarray(0, bytePos);
 };
 
 /**
@@ -144,17 +214,6 @@ export const replacePathParameters = <RequestMessage>(
   });
 };
 
-/**
- * A replacer for binary data in JSON.stringify. Thanks @Unix4ever for the idea!
- * @see https://github.com/grpc-ecosystem/protoc-gen-grpc-gateway-ts/blob/36143bb34a4710d2da3b1aefdcd6cd9aa29b30b0/generator/template.go#L206
- */
-export const jsonStringifyReplacer = (_k: string, v: any): any => {
-  if (v && v instanceof Uint8Array) {
-    return base64Encode(v);
-  }
-  return v;
-};
-
 export type RequestConfig = {
   basePath?: string;
   bearerToken?: string | (() => string);
@@ -206,10 +265,10 @@ export class RPC<RequestMessage, ResponseMessage> {
     let body: string | undefined = undefined;
     if (params && this.method !== `GET`) {
       if (this.bodyKey) {
-        body = JSON.stringify(get(params, this.bodyKey), jsonStringifyReplacer);
+        body = JSON.stringify(get(params, this.bodyKey));
         unset(paramsClone!, this.bodyKey);
       } else {
-        body = JSON.stringify(params, jsonStringifyReplacer);
+        body = JSON.stringify(params);
         paramsClone = undefined as any;
       }
     }
