@@ -1,5 +1,12 @@
 
 
+## [0.1.1](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.0...v0.1.1) (2023-11-08)
+
+
+### Bug Fixes
+
+* export binary for `npx` ([d96ab93](https://github.com/czabaj/protoc-gen-grpc-gateway-es/commit/d96ab930caa21e91f211de96c80626c296420c8b))
+
 ## 0.1.0 (2023-11-08)
 
 

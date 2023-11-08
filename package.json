@@ -25,5 +25,5 @@
     "generateOptions": "cd options && bunx buf generate buf.build/googleapis/googleapis && bunx buf generate buf.build/grpc-ecosystem/grpc-gateway && bunx buf generate buf.build/protocolbuffers/wellknowntypes"
   },
   "type": "module",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
