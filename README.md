@@ -4,19 +4,28 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 
 ## Philosophy
 
-The plugin walks over the proto files and converts protobuf messages to TypeScipt types and protobuf RPC to RPC JavaScript classes. The RPCs are exported as `ServiceName_MethodName` and have following signature
+The plugin walks over the proto files and converts
+
+- protobuf messages to TypeScipt types and
+- protobuf RPC to RPC JavaScript classes.
+
+The RPC JavaScript class contains data about protobuf RPC and two useful methods, the signature of the class is
 
 ```TypeScript
 class RPC<RequestMessage, ResponseMessage> = {
-  // HTTP method of the RPC if not specified by google.api.http option it is `POST`
+  // HTTP method of the RPC. If not specified by google.api.http option defaults
+  // to `POST`.
   readonly method: `DELETE` | `GET` | `PATCH` | `POST` | `PUT`;
-  // URL path of the RPC if not specified by the google.api.http option it is the "$proto_package.$service_name/$method_name"
+  // URL path of the RPC. If not specified by the google.api.http option defaults
+  // to "$proto_package.$service_name/$method_name".
   readonly path: string;
-  // Optional: the path to body in RequestMessage, only if specified by the google.api.http option
+  // Optional: the path to body in the RequestMessage, only if specified by the
+  // google.api.http option.
   readonly bodyKey?: string;
   /**
-   * Creates a JavaScript Request object which can be used directly with fetch API. If you are using other HTTP client,
-   * you can read the request properties from the Request object.
+   * Creates a JavaScript Request object which can be used directly with fetch API.
+   * If you are using other HTTP client, you can read the request properties from
+   * the Request object - in that case read the usage caveats below.
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Request
    * @param config the request configuration for the RPC
    * @param params the request message for the RPC as defined in the proto file
@@ -30,25 +39,37 @@ class RPC<RequestMessage, ResponseMessage> = {
 };
 ```
 
-Unlike many other gRPC-to-TypeScript generators, this one tries to be as minimal as possible, we don't do any extra data de/-serialization for you, but we are using the TypeScript type system to provide more safety and the `runtime.ts` file generated alongside your files contains a few conversion helpers.
+Unlike many other gRPC-to-TypeScript generators, this one tries to be as minimal as possible, we don't do any extra de/-serialization for you, but we are using the TypeScript type system to provide more safety via type aliases and the `runtime.ts` file generated alongside your files contains conversion helpers
 
-- The well-known protobuf types ` google.protobuf.Timestamp` an `google.protobuf.Duration` are typed as a `string`. You can pass the `Timestamp` string to JS `Date`. The `Duration` is a float with `s` suffix for _seconds_, there is no appropriate JS type for that.
-- The protobuf `bytes` type is converted to `BytesString` type, which is a type alias for a `string` with type-only symbol, that prevents you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `UInt8Array`.
-- The protobuf `int64` type is converted to `BigIntString` type, which is a type alias for a `string` with type-only symbol, that prevents you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `BigInt`.
+- The well-known protobuf types `google.protobuf.Timestamp` is converted to JavaScript `string` by the gRPC-gateway. The string contains date-time in ISO-8601 date format, you can convert that to JavaScript `Date` simply by passing it to the `Date` constructor or to the `Data.parse` static method. Conversion of `Date` object to the ISO string is simple with `Date#toISOString` method. There is no conversion helper in the `runtime.ts` module.
+- Well-known protobuf type `google.protobuf.Duration` is converted to JavaScript `string` by the grpc-gateway. The string contains float of seconds with the `s` suffix, there is no appropriate JS type for that.
+- The protobuf `bytes` type is converted to JavaScript `string` containing base64 encoded bytes. This is generated as type alias `BytesString`, preventing you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `UInt8Array`.
+- The protobuf `int64` type is converted to JavaScript `string` containing the ingerer. The gRPC-gateway does that to avoid overflow and loss of precision for very large numbers. This is generated as type alias `BigIntString` preventing you from using it as a regular `string` in TypeScript. There are helper functions in the `runtime.ts` module for conversion from/to `BigInt`.
 
 ## Usage
 
-The usage has two phases, first you need to generate the {Java,Type}Script files and then use them in your app.
+The usage has two phases. First you need to generate the {Java,Type}Script files and then use them in your app.
 
 ### Generate {Java,Type}Script files
 
-The package outputs an executable, which contains fixed version of `bun` runtime and all the needed source files. The executable is currently little overweight (~60MB), but it is a [known issue of `bun`](https://github.com/oven-sh/bun/issues/4453), hopefully they will fix this soon 🤞.
+This package is published as `protoc-gen-grpc-gateway-es` NPM module which contains the executable Node.js script. To use it in your `buf` generation project, write a shell script that will invoke the executable via NPX
 
-The executable is standard `protoc` plugin so you can use it with any `protoc` based tool, but the `buf generate` is hightly recommended since it takes the burden of resolving proto dependencies from your shoulders. If you need some intro to `buf generate` there is a [tutorial on buf website](https://buf.build/docs/generate/tutorial).
+```sh
+#!/bin/sh
 
-To run this plugin copy the executable to your codebase and configure the buf to use it in your `buf.yaml` file, for example
+npx protoc-gen-grpc-gateway-es
+```
+
+Add the execute attribute to the script
+
+```sh
+chmod +x ./path/to/your/script.sh
+```
+
+And set it as a plugin in `buf.gen.yaml`
 
 ```yaml
+# buf.gen.yaml
 version: v1
 managed:
   enabled: true
@@ -59,22 +80,22 @@ managed:
       - buf.build/grpc-ecosystem/grpc-gateway
 plugins:
   - name: es
-    opt: target=ts
-    out: gen/es
-    path: ./path/to/protoc-gen-grpc-gateway-es
+    out: path/to/output/directory
+    opt: target=ts,import_extension=none
+    path: ./path/to/your/script.sh
 ```
+
+If you need some intro to `buf generate` there is a [tutorial on buf website](https://buf.build/docs/generate/tutorial).
 
 You need to change:
 
 - `managed.go_package_prefix.default` to your package prefix,
 - `plugins[0].out` to the output directory of your choice,
-- `plugins[0].path` to the path of the `protoc-gen-grpc-gateway-es` executable.
+- `plugins[0].path` to the path of the shell script which invokes the `protoc-gen-grpc-gateway-es` via NPX.
 
 Then run `buf generate` (assuming you have properly installed and configured the `buf`) and it will generate the TypeScript files for you.
 
-If you want to generate JavaScript instead, just pass change the plugin option `opt: target=js`.
-
-The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options).
+If you want to generate JavaScript instead of TypeScript, just pass change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options). For reason behind option `import_extension=none` see the [caveats](#usage-caveats).
 
 #### Note on formatting
 
@@ -84,11 +105,11 @@ To simplify the development, this plugin is not concerned with pretty printed ou
 npx prettier --write gen/es/
 ```
 
-### Usage in apps code
+### Usage in app code
 
-The generated files relies on some browser API, i.e. it is anticipated you will use it in the browser only, usage in Node.js is not tested, but in theory should work.
+The generated files rely on browser API, i.e. it is anticipated you will use it in the browser only, usage in Node.js is untested, but in theory should work, at least in Node.js>=18
 
-The generated files contains all the the protobuf messages as TypeScript types, all the protobuf enums as TypeScript enums and protobuf methods are converted to `RPC` JavaScript classes. There is also a top-level `runtime.ts` file which contains the constructor of `RPC` class and a few helper TypeScript types and functions.
+The generated files contain all the the protobuf messages as TypeScript types, all the protobuf enums as TypeScript enums and protobuf methods as `RPC` JavaScript classes. There is also a top-level `runtime.ts` file which contains the constructor of `RPC` class and a few helper TypeScript types and functions.
 
 The typical usage with `fetch` might look like this.
 
@@ -117,9 +138,10 @@ const request = SomeService_SomeMethod.getRequest(config, variables)
 
 const serviceMethodCall = fetch(request, { signal }).then(response => {
   if (response.ok) {
-    // type the response with the `responseTypeId` identity function, only needed in TypeScript
-    // if you are concerned with extra micro-task generated by the `.then` call, you can type
-    // the `response.json()` with TypeScript `as` keyword `response.json() as SomeMethodResponse`
+    // type the response with the `responseTypeId` identity function, only
+    // needed in TypeScript. If you are concerned with extra micro-task generated
+    // by the `.then` call, you can type the `response.json()` with TypeScript
+    // `as` keyword `response.json() as Promise<SomeMethodResponse>`
     return response.json().then(SomeService_SomeMethod.responseTypeId)
   }
   // reject the non-succesfull (non 2xx status code) response or do other things in your app
@@ -127,7 +149,9 @@ const serviceMethodCall = fetch(request, { signal }).then(response => {
 })
 ```
 
-You will likely create a wrapper function around the `RPC` class since the logic will be probably the same for all RPCs. We don't provide this wrapper since it is app specific, but it might look something like this.
+Note that the gRPC-gateway always returns a JSON, so `respone.json()` is safe here. In other APIs you might obtain non-JSON response and calling `response.json()` blindly would be a mistake.
+
+You will likely create a wrapper function around the `RPC` class since the logic will be probably the same for all RPCs. We don't provide this wrapper since we consider it app-specific, but it might look something like this.
 
 ```TypeScript
 import { SomeService_SomeMethod } from "./gen/es/example/package/prefix/some_service_pb.ts";
@@ -150,7 +174,8 @@ const fetchWrapRPC = <RequestMessage, ResponseMessage>(
     return fetch(rpc.createRequest(requestConfig, variables), { signal })
       .then((response) => {
         if (response.ok) {
-          return response.json() as ResponseMessage;
+          // avoiding the `.then` call by using `as` keyword
+          return response.json() as Promise<ResponseMessage>;
         }
         return Promise.reject(response);
       });
@@ -162,10 +187,11 @@ const someServiceSomeMethodAsyncFunction = fetchWrapRPC(SomeService_SomeMethod);
 
 // example of AbortController that you can abort imperetively later
 const abortController = new AbortController();
+
 // call the async function which accepts the request message and returns a promise of response JSON
 const responseJSON = await someServiceSomeMethodAsyncFunction(
-  { flip: "flop" },
   { signal: abortController.signal }
+  { flip: "flop" },
 );
 ```
 
