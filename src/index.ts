@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { createEcmaScriptPlugin, runNodeJs } from "@bufbuild/protoplugin";
 
 import { generateTs } from "./generateTs.js";

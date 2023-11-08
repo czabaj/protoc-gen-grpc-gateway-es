@@ -1,4 +1,5 @@
 {
+  "bin": "dist/index.js",
   "dependencies": {
     "@bufbuild/protobuf": "^1.3.1",
     "@bufbuild/protoplugin": "^1.3.1"
@@ -13,13 +14,14 @@
     "husky": "^8.0.3",
     "typescript": "4"
   },
-  "files": [],
+  "files": [
+    "dist/index.js"
+  ],
   "git": "https://github.com/czabaj/protoc-gen-grpc-gateway-es",
   "license": "MIT",
-  "module": "dist/index.js",
   "name": "protoc-gen-grpc-gateway-es",
   "scripts": {
-    "build": "bun build --external @bufbuild/protobuf --external @bufbuild/protoplugin --outdir ./dist ./src/index.ts",
+    "build": "bun build --external @bufbuild/protobuf --external @bufbuild/protoplugin --outdir ./dist --target node ./src/index.ts",
     "generateOptions": "cd options && bunx buf generate buf.build/googleapis/googleapis && bunx buf generate buf.build/grpc-ecosystem/grpc-gateway && bunx buf generate buf.build/protocolbuffers/wellknowntypes"
   },
   "type": "module",
