@@ -5,10 +5,10 @@ import type {
   DescOneof,
   DescService,
 } from "@bufbuild/protobuf";
-import { Schema } from "@bufbuild/protoplugin";
 import {
   type GeneratedFile,
   type Printable,
+  type Schema,
   getFieldTyping,
   localName,
   makeJsDoc,
@@ -30,8 +30,8 @@ import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with {
 export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(`/* eslint-disable */`);
-  file.print(`// @ts-nocheck`)
-  file.print(``)
+  file.print(`// @ts-nocheck`);
+  file.print(``);
   file.print(getRuntimeFileContent());
   const RPC = file.export(`RPC`);
   const BigIntString = file.export(`BigIntString`).toTypeOnly();
@@ -207,7 +207,7 @@ function generateService(
 
 export function generateTs(schema: Schema) {
   const runtimeFile = getRuntimeFile(schema);
-  
+
   for (const file of schema.files) {
     const f = schema.generateFile(file.name + "_pb.ts");
     f.preamble(file);

@@ -171,17 +171,7 @@ const responseJSON = await someServiceSomeMethodAsyncFunction(
 
 #### Usage caveats
 
-1. The generated TypeScript files import other TypeScript files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs), but it might be hard to find solution that works everywhere. In my setup, I went with the default setting which works OK in the bundler, but it broke my Jest tests. I found a solution in [this GitHub issue](https://github.com/kulshekhar/ts-jest/issues/1057) - add a [`moduleNameMapper` to Jest config](https://jestjs.io/docs/configuration#modulenamemapper-objectstring-string--arraystring) which removes the `.js` extension from imports, i.e. makes the JS imports extension-less and the Jest will use its resolution algorithm to find the file.
-
-   ```json
-   // jest.config.json
-
-   {
-     "moduleNameMapper": {
-       "^(.+)\\.js$": "$1"
-     }
-   }
-   ```
+1. The generated TypeScript files import other files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs) and I recommend setting `import_extension=none` which produces extension-less imports, otherwise your bundler or test framework might fail to resolve the imports.
 
 1. The protobuf `oneof` are generated into the TypeScript as union, i.e. the message
 
