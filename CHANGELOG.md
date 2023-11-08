@@ -1,5 +1,12 @@
 
 
+## [0.1.2](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.1...v0.1.2) (2023-11-08)
+
+
+### Bug Fixes
+
+* `bin` field in `package.json` must be an object ([b371522](https://github.com/czabaj/protoc-gen-grpc-gateway-es/commit/b371522367d8a8c09cebe361597177c16a458e2d))
+
 ## [0.1.1](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.0...v0.1.1) (2023-11-08)
 
 

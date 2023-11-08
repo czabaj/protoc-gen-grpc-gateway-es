@@ -28,5 +28,5 @@
     "release": "bun test && bun run build && bunx release-it"
   },
   "type": "module",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }
