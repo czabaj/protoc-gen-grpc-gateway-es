@@ -20,6 +20,10 @@
     "dist/index.js"
   ],
   "git": "https://github.com/czabaj/protoc-gen-grpc-gateway-es",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/czabaj/protoc-gen-grpc-gateway-es.git"
+  },
   "keywords": [
     "grpc-gateway",
     "protobuf",
