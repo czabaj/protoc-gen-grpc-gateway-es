@@ -20,6 +20,11 @@
     "dist/index.js"
   ],
   "git": "https://github.com/czabaj/protoc-gen-grpc-gateway-es",
+  "keywords": [
+    "grpc-gateway",
+    "protobuf",
+    "protoc"
+  ],
   "license": "MIT",
   "name": "protoc-gen-grpc-gateway-es",
   "scripts": {
