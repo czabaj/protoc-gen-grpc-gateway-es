@@ -4,9 +4,11 @@ import { protoBase64 } from "@bufbuild/protobuf";
 
 import {
   RPC,
+  asBigIntString,
   asBytesString,
   bytesStringToUint8Array,
   replacePathParameters,
+  BigIntString,
 } from "../src/runtime";
 
 test(`should replace path parameters`, () => {
@@ -89,4 +91,17 @@ test(`the method for binary enc/de-coding conforms to @bufbuild etalon`, async (
   expect(encodedActual).toBe(encodedExpected);
   const decodedActual = bytesStringToUint8Array(encodedActual);
   expect(decodedActual).toEqual(inputBinary);
+});
+
+test(`the asBigIntString function accepts wide range of inputs`, () => {
+  // accepts number
+  expect(asBigIntString(0)).toBe(`0`);
+  // accepts string
+  expect(asBigIntString(`1`)).toBe(`1`);
+  // accepts BigInt
+  expect(asBigIntString(BigInt(-1))).toBe(`-1`);
+  // accepts BigIntString
+  expect(asBigIntString(`-1` as BigIntString)).toBe(`-1`);
+  // throws with invalid string
+  expect(() => asBigIntString(`1.1`)).toThrow();
 });

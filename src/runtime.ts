@@ -24,8 +24,8 @@ export const bigIntStringToString: (value: BigIntString) => string = String;
  * Converts a JavaScript values to BigIntString type.
  */
 export const asBigIntString: (
-  value: BigIntString | bigint | number
-) => BigIntString = String as any;
+  value: string | bigint | number
+) => BigIntString = (v) => String(BigInt(v)) as BigIntString;
 
 /**
  * String containing binary data encoded as base64, used for protobuf bytes fields.
