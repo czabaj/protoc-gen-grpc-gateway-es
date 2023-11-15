@@ -1,5 +1,12 @@
 
 
+## [0.1.3](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.2...v0.1.3) (2023-11-15)
+
+
+### Bug Fixes
+
+* `asBigIntString` does not accept `string` input ([f845b7d](https://github.com/czabaj/protoc-gen-grpc-gateway-es/commit/f845b7d90407c9d162b9bae0b6a004b3a89f039f))
+
 ## [0.1.2](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.1...v0.1.2) (2023-11-08)
 
 
