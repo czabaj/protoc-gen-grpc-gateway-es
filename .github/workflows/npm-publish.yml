@@ -6,6 +6,7 @@ name: Publish to NPM
 on:
   release:
     types: [created]
+  workflow_dispatch:
 
 jobs:
   publish-npm:
@@ -15,6 +16,5 @@ jobs:
       - uses: oven-sh/setup-bun@v1
       - run: bun install
       - run: bun run build
+      - run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}\nregistry=https://registry.npmjs.org/\nalways-auth=true" > ~/.npmrc 
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
