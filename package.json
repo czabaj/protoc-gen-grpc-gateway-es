@@ -34,7 +34,7 @@
   "scripts": {
     "build": "bun build --external @bufbuild/protobuf --external @bufbuild/protoplugin --outdir ./dist --target node ./src/index.ts",
     "generateOptions": "cd options && bunx buf generate buf.build/googleapis/googleapis && bunx buf generate buf.build/grpc-ecosystem/grpc-gateway && bunx buf generate buf.build/protocolbuffers/wellknowntypes",
-    "release": "bun test && bun run build && bunx release-it"
+    "release": "bunx release-it"
   },
   "type": "module",
   "version": "0.1.2"
