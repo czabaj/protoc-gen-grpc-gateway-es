@@ -1,5 +1,12 @@
 
 
+## [0.1.4](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.3...v0.1.4) (2023-12-12)
+
+
+### Bug Fixes
+
+* array not set as quer-string ([49e78a2](https://github.com/czabaj/protoc-gen-grpc-gateway-es/commit/49e78a2a10b1b9caf5a4e04d5e348799751a7dcb))
+
 ## [0.1.3](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.2...v0.1.3) (2023-11-15)
 
 
