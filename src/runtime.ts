@@ -187,6 +187,24 @@ export const isScalarType = (
   }
 };
 
+/**
+ * Method that appends key and value to the URLSearchParams object. The value
+ * must be a scalar type otherwise it is ignored. Passing `undefined` skips the
+ * value as well.
+ * @param searchParams
+ * @param key
+ * @param value
+ */
+export const appendQueryParameter = (
+  searchParams: URLSearchParams,
+  key: string,
+  value: any
+) => {
+  if (isScalarType(value)) {
+    searchParams.append(key, String(value));
+  }
+};
+
 const pathParameterRe = /{([^}]+)}/g;
 /**
  * Replaces path parameters in the path with values from the request message. It also removes the consumed parameters
@@ -263,7 +281,7 @@ export class RPC<RequestMessage, ResponseMessage> {
       : new URL(pathWithParams, globalThis.location.href);
 
     let body: string | undefined = undefined;
-    if (params && this.method !== `GET`) {
+    if (params && this.method !== `DELETE` && this.method !== `GET`) {
       if (this.bodyKey) {
         body = JSON.stringify(get(params, this.bodyKey));
         unset(paramsClone!, this.bodyKey);
@@ -275,8 +293,12 @@ export class RPC<RequestMessage, ResponseMessage> {
 
     if (paramsClone) {
       for (const [k, v] of Object.entries(paramsClone)) {
-        if (isScalarType(v)) {
-          url.searchParams.set(k, String(v));
+        if (Array.isArray(v)) {
+          for (const item of v) {
+            appendQueryParameter(url.searchParams, k, item);
+          }
+        } else {
+          appendQueryParameter(url.searchParams, k, v);
         }
       }
     }

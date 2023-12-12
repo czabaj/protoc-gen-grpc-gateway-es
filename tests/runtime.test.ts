@@ -51,6 +51,19 @@ test(`should properly distribute path parameters`, async () => {
   expect(bodyContent).toBe(JSON.stringify(parameters.flip));
 });
 
+test(`should send all non-path parameters as query-string for http method DELETE`, () => {
+  const path = `/v1/{name}`;
+  const parameters = {
+    name: `flap`,
+    flop: [`flup`, `flep`],
+  };
+  const rpc = new RPC(`DELETE`, path);
+  const config = { basePath: `https://example.test` };
+  const request = rpc.createRequest(config, parameters);
+  // the `flop` shuld be in the queryString
+  expect(request.url).toBe(`https://example.test/v1/flap?flop=flup&flop=flep`);
+});
+
 test(`should set Bearer token if provided as a string in config`, () => {
   const path = `/v1/flip`;
   const rpc = new RPC(`GET`, path);
