@@ -3,12 +3,12 @@ import { expect, test } from "bun:test";
 import { protoBase64 } from "@bufbuild/protobuf";
 
 import {
+  BigIntString,
   RPC,
-  asBigIntString,
-  asBytesString,
   bytesStringToUint8Array,
   replacePathParameters,
-  BigIntString,
+  toBigIntString,
+  toBytesString,
 } from "../src/runtime";
 
 test(`should replace path parameters`, () => {
@@ -99,22 +99,22 @@ test(`should prepend full URL basePath`, () => {
 test(`the method for binary enc/de-coding conforms to @bufbuild etalon`, async () => {
   const input = `ăѣ𝔠ծềſģȟᎥ𝒋ǩľḿꞑȯ𝘱𝑞𝗋𝘴ȶ𝞄𝜈ψ𝒙𝘆𝚣1234567890!@#$%^&*()-_=+[{]};:'",<.>/?~𝘈Ḇ𝖢𝕯٤ḞԍНǏ𝙅ƘԸⲘ𝙉০Ρ𝗤Ɍ𝓢ȚЦ𝒱Ѡ𝓧ƳȤѧᖯć𝗱ễ𝑓𝙜Ⴙ𝞲𝑗𝒌ļṃŉо𝞎𝒒ᵲꜱ𝙩ừ𝗏ŵ𝒙𝒚ź1234567890!@#$%^&*()-_=+[{]};:'",<.>/?~АḂⲤ𝗗𝖤𝗙ꞠꓧȊ𝐉𝜥ꓡ𝑀𝑵Ǭ𝙿𝑄Ŗ𝑆𝒯𝖴𝘝𝘞ꓫŸ𝜡ả𝘢ƀ𝖼ḋếᵮℊ𝙝Ꭵ𝕛кιṃդⱺ𝓅𝘲𝕣𝖘ŧ𝑢ṽẉ𝘅ყž1234567890!@#$%^&*()-_=+[{]};:'",<.>/?~Ѧ𝙱ƇᗞΣℱԍҤ١𝔍К𝓛𝓜ƝȎ𝚸𝑄Ṛ𝓢ṮṺƲᏔꓫ𝚈𝚭𝜶Ꮟçძ𝑒𝖿𝗀ḧ𝗂𝐣ҝɭḿ𝕟𝐨𝝔𝕢ṛ𝓼тú𝔳ẃ⤬𝝲𝗓1234567890!@#$%^&*()-_=+[{]};:'",<.>/?~𝖠Β𝒞𝘋𝙴𝓕ĢȞỈ𝕵ꓗʟ𝙼ℕ০𝚸𝗤ՀꓢṰǓⅤ𝔚Ⲭ𝑌𝙕𝘢𝕤 `;
   const inputBinary = new TextEncoder().encode(input);
-  const encodedActual = asBytesString(inputBinary);
+  const encodedActual = toBytesString(inputBinary);
   const encodedExpected = protoBase64.enc(inputBinary);
   expect(encodedActual).toBe(encodedExpected);
   const decodedActual = bytesStringToUint8Array(encodedActual);
   expect(decodedActual).toEqual(inputBinary);
 });
 
-test(`the asBigIntString function accepts wide range of inputs`, () => {
+test(`the toBigIntString function accepts wide range of inputs`, () => {
   // accepts number
-  expect(asBigIntString(0)).toBe(`0`);
+  expect(toBigIntString(0)).toBe(`0`);
   // accepts string
-  expect(asBigIntString(`1`)).toBe(`1`);
+  expect(toBigIntString(`1`)).toBe(`1`);
   // accepts BigInt
-  expect(asBigIntString(BigInt(-1))).toBe(`-1`);
+  expect(toBigIntString(BigInt(-1))).toBe(`-1`);
   // accepts BigIntString
-  expect(asBigIntString(`-1` as BigIntString)).toBe(`-1`);
+  expect(toBigIntString(`-1` as BigIntString)).toBe(`-1`);
   // throws with invalid string
-  expect(() => asBigIntString(`1.1`)).toThrow();
+  expect(() => toBigIntString(`1.1`)).toThrow();
 });

@@ -23,7 +23,7 @@ export const bigIntStringToString: (value: BigIntString) => string = String;
 /**
  * Converts a JavaScript values to BigIntString type.
  */
-export const asBigIntString: (
+export const toBigIntString: (
   value: string | bigint | number
 ) => BigIntString = (v) => String(BigInt(v)) as BigIntString;
 
@@ -50,7 +50,7 @@ decTable["_".charCodeAt(0)] = encTable.indexOf("/");
  * Converts Uint8Array to BytesString. Thanks @timostamm !
  * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L42
  */
-export const asBytesString = (bytes: Uint8Array): BytesString => {
+export const toBytesString = (bytes: Uint8Array): BytesString => {
   const base64 = [];
   let groupPos = 0, // position in base64 group
     p = 0; // carry over from previous byte
