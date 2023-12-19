@@ -21,6 +21,7 @@ import {
   getOpenapiMessageOption,
   isImportSymbol,
   pathParametersToLocal,
+  protoCamelCase,
 } from "./helpers";
 import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with { type: "macro" };
 
@@ -193,7 +194,7 @@ function generateService(
         googleapisHttpMethodOption.body &&
         googleapisHttpMethodOption.body !== "*"
       ) {
-        bodyPath = googleapisHttpMethodOption.body;
+        bodyPath = protoCamelCase(googleapisHttpMethodOption.body);
       }
     }
     f.print(makeJsDoc(method));

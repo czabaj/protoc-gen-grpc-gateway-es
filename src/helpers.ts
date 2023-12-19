@@ -39,7 +39,7 @@ export const isImportSymbol = (
 };
 
 // copied from https://github.com/bufbuild/protobuf-es/blob/12974f616a3efeb249c21752f2a7a7b9d99b53f6/packages/protobuf/src/private/names.ts#L142C42-L142C42
-function protoCamelCase(snakeCase: string): string {
+export function protoCamelCase(snakeCase: string): string {
   let capNext = false;
   const b: string[] = [];
   for (let i = 0; i < snakeCase.length; i++) {

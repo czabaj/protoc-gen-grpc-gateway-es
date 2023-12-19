@@ -303,6 +303,68 @@ test(`should convert FieldMask type to string`, async () => {
   );
 });
 
+test(`should camel-case the body option`, async () => {
+  const inputFileName = `multi_word_body_option.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+      import "google/api/annotations.proto";
+      import "google/api/client.proto";
+      import "google/api/field_behavior.proto";
+      
+      service MultiWordBodyOptionService {
+        rpc CreateMethod(CreateMethodRequest) returns (CreateMethodResponse) {
+          option (google.api.http) = {
+            post: "/v1/{flip_flep.name}",
+            body: "flip_flep"
+          };
+        }
+      };
+
+      message FlipFlepMessage {
+        string name = 1;
+      }
+      
+      message CreateMethodRequest {
+        FlipFlepMessage flip_flep = 1 [(google.api.field_behavior) = REQUIRED];
+      };
+
+      message CreateMethodResponse {
+        FlipFlepMessage flip_flep = 1;
+      };
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+      import { RPC } from "./runtime.js";
+
+      export type FlipFlepMessage = {
+        name?: string;
+      }
+    
+      export type CreateMethodRequest = {
+        flipFlep: FlipFlepMessage;
+      }
+      
+      export type CreateMethodResponse = {
+        flipFlep?: FlipFlepMessage;
+      }
+      
+      export const MultiWordBodyOptionService_CreateMethod = new RPC<CreateMethodRequest, CreateMethodResponse>(
+        "POST",
+        "/v1/{flipFlep.name}", // this should be camel-cased
+        "flipFlep" // this should be camel-cased
+      );
+      `
+  );
+});
+
 test(`should handle method w/o google.api.http option`, async () => {
   const inputFileName = `service_without_http_option.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
