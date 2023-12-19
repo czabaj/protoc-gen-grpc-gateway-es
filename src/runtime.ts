@@ -202,6 +202,10 @@ export const appendQueryParameter = (
 ) => {
   if (isScalarType(value)) {
     searchParams.append(key, String(value));
+  } else {
+    console.warn(
+      `Property "${key}" in request message is not send in request body, and cannot be send in a query-string parameters because it contains a value of type _object_. Property ${key}" will be skipped.`
+    );
   }
 };
 
