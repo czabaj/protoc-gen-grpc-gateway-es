@@ -1,5 +1,12 @@
 
 
+## [0.1.6](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.5...v0.1.6) (2023-12-19)
+
+
+### Bug Fixes
+
+* google.http.api option body not camel-cased ([70c56c3](https://github.com/czabaj/protoc-gen-grpc-gateway-es/commit/70c56c30316d4064defffed9f69e6a757be359f4))
+
 ## [0.1.5](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.4...v0.1.5) (2023-12-14)
 
 ## [0.1.4](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.3...v0.1.4) (2023-12-12)
